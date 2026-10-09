@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>SIMReady VR - Traffic Sign Explorer</title>
+
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  </head>
+
+  <body>
+    <a-scene>
+      <!-- Mouse bisa langsung klik objek -->
+      <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"> </a-entity>
+
+      <!-- SKY -->
+      <a-sky color="#87CEEB"></a-sky>
+
+      <!-- TANAH -->
+      <a-plane position="0 0 -8" rotation="-90 0 0" width="30" height="30" color="#8DBA73"> </a-plane>
+
+      <!-- JALAN -->
+      <a-plane position="0 0.02 -8" rotation="-90 0 0" width="10" height="25" color="#444444"> </a-plane>
+
+      <!-- MARKA -->
+      <a-box position="0 0.04 -5" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+
+      <a-box position="0 0.04 -9" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+
+      <a-box position="0 0.04 -13" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+
+      <!-- JUDUL -->
+      <a-text value="TRAFFIC SIGN EXPLORER" position="0 4 -6" align="center" width="8" color="#111111"> </a-text>
+
+      <a-text value="Klik rambu untuk melihat informasi" position="0 3.45 -6" align="center" width="5" color="#333333"> </a-text>
+
+      <!-- ======================= -->
+      <!-- RAMBU STOP -->
+      <!-- ======================= -->
+
+      <a-entity position="-3 1.7 -7">
+        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
+
+        <a-circle id="signStop" class="clickable sign" position="0 0.7 0" radius="0.8" color="#C62828"> </a-circle>
+
+        <a-text value="STOP" position="0 0.7 0.03" align="center" width="3" color="white"> </a-text>
+      </a-entity>
+
+      <!-- ======================= -->
+      <!-- DILARANG MASUK -->
+      <!-- ======================= -->
+
+      <a-entity position="0 1.7 -7">
+        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
+
+        <a-circle id="signNoEntry" class="clickable sign" position="0 0.7 0" radius="0.8" color="#D32F2F"> </a-circle>
+
+        <a-box position="0 0.7 0.03" width="1" height="0.22" depth="0.03" color="white"> </a-box>
+      </a-entity>
+
+      <!-- ======================= -->
+      <!-- PEJALAN KAKI -->
+      <!-- ======================= -->
+
+      <a-entity position="3 1.7 -7">
+        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
+
+        <a-circle id="signPedestrian" class="clickable sign" position="0 0.7 0" radius="0.8" color="#1565C0"> </a-circle>
+
+        <a-text value="PEJALAN\nKAKI" position="0 0.82 0.03" align="center" width="2.2" color="white"> </a-text>
+      </a-entity>
+
+      <!-- ======================= -->
+      <!-- PANEL INFORMASI -->
+      <!-- ======================= -->
+
+      <a-entity id="infoPanel" position="0 2 -3.5" visible="false">
+        <a-plane width="5.5" height="3" color="#FFFFFF"> </a-plane>
+
+        <a-text id="infoTitle" value="INFORMASI" position="0 0.8 0.05" align="center" width="5" color="#111111"> </a-text>
+
+        <a-text id="infoText" value="" position="0 0 0.05" align="center" width="4.5" color="#333333"> </a-text>
+
+        <!-- BUTTON TUTUP -->
+        <a-box id="closePanel" class="clickable" position="0 -1 0.1" width="1.8" height="0.5" depth="0.1" color="#C62828"> </a-box>
+
+        <a-text value="TUTUP" position="0 -1 0.17" align="center" width="2.5" color="white"> </a-text>
+      </a-entity>
+
+      <!-- HOME -->
+      <a-box id="homeButton" class="clickable" position="-2 0.6 -4" width="2" height="0.55" depth="0.15" color="#555555"> </a-box>
+
+      <a-text value="HOME" position="-2 0.6 -3.9" align="center" width="2.5" color="white"> </a-text>
+
+      <!-- NEXT -->
+      <a-box id="nextButton" class="clickable" position="2 0.6 -4" width="2" height="0.55" depth="0.15" color="#333333"> </a-box>
+
+      <a-text value="NEXT" position="2 0.6 -3.9" align="center" width="2.5" color="white"> </a-text>
+
+      <!-- CAMERA -->
+      <a-camera position="0 1.6 1"></a-camera>
+    </a-scene>
+
+    <script>
+      const panel = document.querySelector("#infoPanel");
+      const infoTitle = document.querySelector("#infoTitle");
+      const infoText = document.querySelector("#infoText");
+
+      function showInfo(title, description) {
+        infoTitle.setAttribute("value", title);
+        infoText.setAttribute("value", description);
+
+        panel.setAttribute("visible", true);
+      }
+
+      // STOP
+      document.querySelector("#signStop").addEventListener("click", function () {
+        showInfo("RAMBU STOP", "Pengguna jalan harus berhenti\nsebelum melanjutkan perjalanan.");
+      });
+
+      // DILARANG MASUK
+      document.querySelector("#signNoEntry").addEventListener("click", function () {
+        showInfo("DILARANG MASUK", "Menunjukkan bahwa kendaraan\ntidak diperbolehkan memasuki\narea tersebut.");
+      });
+
+      // PEJALAN KAKI
+      document.querySelector("#signPedestrian").addEventListener("click", function () {
+        showInfo("AREA PEJALAN KAKI", "Perhatikan keberadaan\npejalan kaki di sekitar jalan.");
+      });
+
+      // TUTUP
+      document.querySelector("#closePanel").addEventListener("click", function () {
+        panel.setAttribute("visible", false);
+      });
+
+      // HOME
+      document.querySelector("#homeButton").addEventListener("click", function () {
+        window.location.href = "index.html";
+      });
+
+      // NEXT
+      document.querySelector("#nextButton").addEventListener("click", function () {
+        window.location.href = "situasi.html";
+      });
+
+      // HOVER RAMBU
+      document.querySelectorAll(".sign").forEach(function (sign) {
+        sign.addEventListener("mouseenter", function () {
+          sign.setAttribute("scale", "1.15 1.15 1.15");
+        });
+
+        sign.addEventListener("mouseleave", function () {
+          sign.setAttribute("scale", "1 1 1");
+        });
+      });
+    </script>
+  </body>
+</html>

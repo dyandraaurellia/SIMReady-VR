@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMReady VR - Simulasi Persimpangan</title>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <a-scene background="color: #87CEEB">
+    <a-assets>
+      <a-asset-item id="mdlCrossroad" src="assets/models/GLB%20format/road-crossroad.glb"></a-asset-item>
+      <a-asset-item id="mdlStraight" src="assets/models/GLB%20format/road-straight.glb"></a-asset-item>
+      <a-asset-item id="mdlCrossing" src="assets/models/GLB%20format/road-crossing.glb"></a-asset-item>
+      <a-asset-item id="mdlSedan" src="assets/models/car-kit/sedan.glb"></a-asset-item>
+      <a-asset-item id="mdlTaxi" src="assets/models/car-kit/taxi.glb"></a-asset-item>
+      <a-asset-item id="mdlAmbulance" src="assets/models/car-kit/ambulance.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Pencahayaan untuk visual lebih realistis -->
+    <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.6" position="-5 10 5" castShadow="true"></a-light>
+
+    <!-- Mouse Cursor -->
+    <a-entity id="mouseCursor" cursor="rayOrigin: mouse; fuse: false"
+      raycaster="objects: .clickable; far: 40; interval: 0"></a-entity>
+
+    <a-camera position="0 1.6 1"></a-camera>
+
+    <!-- Lingkungan Dasar -->
+    <a-sky color="#87CEEB"></a-sky>
+
+    <!-- Rumput -->
+    <a-plane position="0 0 -10" rotation="-90 0 0" width="100" height="100" color="#5C9E45"></a-plane>
+
+    <!-- Lapisan jalan cadangan (jika tile GLB tidak menutupi dengan sempurna) -->
+    <a-plane position="0 0.01 -10" rotation="-90 0 0" width="8" height="40" color="#42464B"></a-plane>
+    <a-plane position="0 0.02 -10" rotation="-90 90 0" width="8" height="40" color="#42464B"></a-plane>
+
+    <!-- Jalan 3D (Kenney City Kit) -->
+    <a-entity position="0 0.03 -10">
+      <a-entity gltf-model="#mdlCrossroad" position="0 0 0"></a-entity>
+      <a-entity gltf-model="#mdlCrossing" position="0 0 -4" rotation="0 0 0"></a-entity>
+      <a-entity gltf-model="#mdlStraight" position="0 0 4" rotation="0 0 0"></a-entity>
+      <a-entity gltf-model="#mdlCrossing" position="4 0 0" rotation="0 90 0"></a-entity>
+      <a-entity gltf-model="#mdlStraight" position="-4 0 0" rotation="0 90 0"></a-entity>
+    </a-entity>
+
+    <!-- Lampu Lalu Lintas Interaktif (Menggunakan Primitive agar mudah diganti warna/fase oleh JS) -->
+    <a-entity id="trafficLight" position="3 0 -13" rotation="0 -45 0">
+      <a-cylinder position="0 2 0" radius="0.08" height="4" color="#263238"></a-cylinder>
+      <a-box position="0 3.5 0" width="0.6" height="1.6" depth="0.5" color="#17202A"></a-box>
+      <!-- Indikator Lampu -->
+      <a-sphere id="tlRed" radius="0.18" position="0 4.0 0.28" color="#550000"></a-sphere>
+      <a-sphere id="tlYellow" radius="0.18" position="0 3.5 0.28" color="#555500"></a-sphere>
+      <a-sphere id="tlGreen" radius="0.18" position="0 3.0 0.28" color="#005500"></a-sphere>
+      <!-- Pelindung Lampu -->
+      <a-cylinder position="0 4.1 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
+        theta-length="180"></a-cylinder>
+      <a-cylinder position="0 3.6 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
+        theta-length="180"></a-cylinder>
+      <a-cylinder position="0 3.1 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
+        theta-length="180"></a-cylinder>
+    </a-entity>
+
+    <!-- Kendaraan 3D (Kenney Car Kit) -->
+    <a-entity gltf-model="#mdlTaxi" position="-2.5 0.04 -14" rotation="0 90 0"></a-entity>
+    <a-entity gltf-model="#mdlSedan" position="2.5 0.04 -6" rotation="0 -90 0"></a-entity>
+    <a-entity gltf-model="#mdlAmbulance" position="-8 0.04 -8.5" rotation="0 0 0"></a-entity>
+
+    <!-- PANEL UTAMA SIMULASI -->
+    <a-entity id="mainUI" position="0 2 -3.5">
+      <a-plane width="7.5" height="3.5" color="#FFFFFF" material="shader: flat; opacity: 0.96"></a-plane>
+
+      <a-text id="uiTitle" value="SIMULASI KEPUTUSAN" position="0 1.2 0.05" align="center" width="6.5" color="#16324F"
+        wrap-count="30"></a-text>
+      <a-text id="uiBody" value="Amati kondisi persimpangan di depan dan pilih tindakan yang paling aman."
+        position="0 0.4 0.05" align="center" width="6.5" color="#17202A" wrap-count="45"></a-text>
+
+      <!-- Tombol Mulai -->
+      <a-box id="btnStart" class="clickable" position="0 -0.8 0.1" width="3.2" height="0.65" depth="0.1"
+        color="#168447">
+        <a-text value="MULAI SIMULASI" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
+      </a-box>
+
+      <!-- Tombol Pilihan -->
+      <a-box id="btnOpt1" position="-1.8 -0.8 0.1" visible="false" scale="0 0 0" width="3.4" height="0.75" depth="0.1"
+        color="#34495E">
+        <a-text class="btn-text" value="OPSI 1" position="0 0 0.06" align="center" color="#FFFFFF" width="3.5"
+          wrap-count="20"></a-text>
+      </a-box>
+
+      <a-box id="btnOpt2" position="1.8 -0.8 0.1" visible="false" scale="0 0 0" width="3.4" height="0.75" depth="0.1"
+        color="#34495E">
+        <a-text class="btn-text" value="OPSI 2" position="0 0 0.06" align="center" color="#FFFFFF" width="3.5"
+          wrap-count="20"></a-text>
+      </a-box>
+
+      <!-- Tombol Lanjut Skenario -->
+      <a-box id="btnNext" position="0 -0.8 0.1" visible="false" scale="0 0 0" width="2.8" height="0.65" depth="0.1"
+        color="#2878B5">
+        <a-text value="LANJUTKAN" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
+      </a-box>
+
+      <!-- Tombol Ulangi -->
+      <a-box id="btnRestart" position="-1.6 -0.8 0.1" visible="false" scale="0 0 0" width="2.8" height="0.65"
+        depth="0.1" color="#168447">
+        <a-text value="ULANGI SIMULASI" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
+      </a-box>
+
+      <!-- Tombol Pindah Tahap -->
+      <a-box id="btnGoHazard" position="1.6 -0.8 0.1" visible="false" scale="0 0 0" width="3" height="0.65" depth="0.1"
+        color="#2878B5">
+        <a-text value="LANJUT KE BAHAYA" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
+      </a-box>
+    </a-entity>
+
+    <!-- Navigasi Bawah -->
+    <a-box id="navBackButton" class="clickable" position="-3.2 0.5 -3" width="1.8" height="0.55" depth="0.18"
+      color="#34495E"></a-box>
+    <a-text value="KEMBALI" position="-3.2 0.5 -2.87" align="center" color="#FFFFFF" width="2.2"></a-text>
+
+    <a-box id="navHomeButton" class="clickable" position="3.2 0.5 -3" width="1.8" height="0.55" depth="0.18"
+      color="#34495E"></a-box>
+    <a-text value="HOME" position="3.2 0.5 -2.87" align="center" color="#FFFFFF" width="2"></a-text>
+
+  </a-scene>
+
+  <script>
+    (() => {
+      // Definisi Skenario Pengambilan Keputusan
+      const scenarios = [
+        {
+          lightState: 'red',
+          title: 'SKENARIO 1: LAMPU MERAH',
+          desc: 'Anda sedang mengemudi menuju persimpangan dan lampu lalu lintas menyala MERAH.\n\nApa tindakan yang paling aman?',
+          options: [
+            { text: 'BERHENTI DI GARIS HENTI', correct: true, feedback: 'Benar! Anda wajib berhenti di belakang garis henti untuk menghindari konflik dengan pejalan kaki dan kendaraan lain.' },
+            { text: 'TETAP MELAJU', correct: false, feedback: 'Sangat berbahaya! Menerobos lampu merah dapat menyebabkan kecelakaan fatal. Anda wajib berhenti sepenuhnya.' }
+          ]
+        },
+        {
+          lightState: 'yellow',
+          title: 'SKENARIO 2: LAMPU KUNING',
+          desc: 'Saat Anda mendekati persimpangan, lampu hijau tiba-tiba berubah menjadi KUNING.\n\nApa tindakan Anda?',
+          options: [
+            { text: 'PERCEPAT KENDARAAN', correct: false, feedback: 'Salah! Mempercepat kendaraan saat lampu kuning sangat berisiko. Lampu kuning adalah peringatan untuk berhenti.' },
+            { text: 'KURANGI KECEPATAN', correct: true, feedback: 'Tepat! Lampu kuning berarti Anda harus mengurangi kecepatan dan bersiap untuk berhenti dengan aman.' }
+          ]
+        },
+        {
+          lightState: 'green',
+          title: 'SKENARIO 3: LAMPU HIJAU',
+          desc: 'Lampu lalu lintas menyala HIJAU, dan giliran Anda untuk melintasi persimpangan.\n\nApa tindakan yang tepat?',
+          options: [
+            { text: 'CEK KONDISI LALU LINTAS', correct: true, feedback: 'Benar! Meskipun hijau, tetap waspada. Periksa persimpangan dari pejalan kaki atau kendaraan yang mungkin terlambat melintas.' },
+            { text: 'LANGSUNG TANCAP GAS', correct: false, feedback: 'Kurang aman. Selalu pastikan persimpangan benar-benar aman sebelum melaju, meskipun lampu menunjukkan hijau.' }
+          ]
+        }
+      ];
+
+      let currentScenarioIndex = 0;
+      let correctAnswers = 0;
+
+      const uiTitle = document.querySelector('#uiTitle');
+      const uiBody = document.querySelector('#uiBody');
+      const btnStart = document.querySelector('#btnStart');
+      const btnOpt1 = document.querySelector('#btnOpt1');
+      const btnOpt2 = document.querySelector('#btnOpt2');
+      const btnNext = document.querySelector('#btnNext');
+      const btnRestart = document.querySelector('#btnRestart');
+      const btnGoHazard = document.querySelector('#btnGoHazard');
+
+      // Fungsi untuk mengontrol lampu lalu lintas (visual dan emisi)
+      function setTrafficLight(state) {
+        document.querySelector('#tlRed').setAttribute('color', state === 'red' ? '#FF0000' : '#550000');
+        document.querySelector('#tlYellow').setAttribute('color', state === 'yellow' ? '#FFC300' : '#555500');
+        document.querySelector('#tlGreen').setAttribute('color', state === 'green' ? '#00FF00' : '#005500');
+
+        document.querySelector('#tlRed').setAttribute('material', state === 'red' ? 'shader: flat' : '');
+        document.querySelector('#tlYellow').setAttribute('material', state === 'yellow' ? 'shader: flat' : '');
+        document.querySelector('#tlGreen').setAttribute('material', state === 'green' ? 'shader: flat' : '');
+      }
+
+      // Fungsi bantu visibilitas UI
+      function showEl(el) {
+        el.setAttribute('visible', 'true');
+        el.setAttribute('scale', '1 1 1');
+        el.classList.add('clickable');
+      }
+
+      function hideEl(el) {
+        el.setAttribute('visible', 'false');
+        el.setAttribute('scale', '0 0 0');
+        el.classList.remove('clickable');
+      }
+
+      // Memuat skenario sesuai index
+      function loadScenario() {
+        if (currentScenarioIndex >= scenarios.length) {
+          showSummary();
+          return;
+        }
+
+        const s = scenarios[currentScenarioIndex];
+        setTrafficLight(s.lightState);
+
+        uiTitle.setAttribute('value', s.title);
+        uiTitle.setAttribute('color', '#16324F');
+        uiBody.setAttribute('value', s.desc);
+
+        btnOpt1.querySelector('.btn-text').setAttribute('value', s.options[0].text);
+        btnOpt2.querySelector('.btn-text').setAttribute('value', s.options[1].text);
+
+        btnOpt1.dataset.correct = s.options[0].correct;
+        btnOpt1.dataset.feedback = s.options[0].feedback;
+        btnOpt2.dataset.correct = s.options[1].correct;
+        btnOpt2.dataset.feedback = s.options[1].feedback;
+
+        showEl(btnOpt1);
+        showEl(btnOpt2);
+
+        hideEl(btnStart);
+        hideEl(btnNext);
+        hideEl(btnRestart);
+        hideEl(btnGoHazard);
+      }
+
+      // Memproses hasil pilihan pengguna
+      function handleOptionClick(el) {
+        const isCorrect = el.dataset.correct === 'true';
+        const feedbackMsg = el.dataset.feedback;
+
+        if (isCorrect) correctAnswers++;
+
+        hideEl(btnOpt1);
+        hideEl(btnOpt2);
+
+        uiTitle.setAttribute('value', isCorrect ? 'TEPAT!' : 'KURANG TEPAT');
+        uiTitle.setAttribute('color', isCorrect ? '#168447' : '#C62828');
+        uiBody.setAttribute('value', feedbackMsg);
+
+        showEl(btnNext);
+      }
+
+      // Menampilkan ringkasan akhir
+      function showSummary() {
+        setTrafficLight('yellow'); // Lampu kuning berkedip atau stanby sebagai penanda selesai
+        uiTitle.setAttribute('value', 'SIMULASI SELESAI');
+        uiTitle.setAttribute('color', '#16324F');
+        uiBody.setAttribute('value', `Anda menyelesaikan ${scenarios.length} skenario dengan ${correctAnswers} keputusan yang tepat.\n\nIngatlah selalu untuk memprioritaskan keselamatan dan memperhatikan rambu serta marka jalan demi keamanan bersama.`);
+
+        hideEl(btnOpt1);
+        hideEl(btnOpt2);
+        hideEl(btnNext);
+        hideEl(btnStart);
+
+        showEl(btnRestart);
+        showEl(btnGoHazard);
+      }
+
+      // --- Event Listeners ---
+
+      btnStart.addEventListener('click', () => {
+        currentScenarioIndex = 0;
+        correctAnswers = 0;
+        loadScenario();
+      });
+
+      btnOpt1.addEventListener('click', function () { handleOptionClick(this); });
+      btnOpt2.addEventListener('click', function () { handleOptionClick(this); });
+
+      btnNext.addEventListener('click', () => {
+        currentScenarioIndex++;
+        loadScenario();
+      });
+
+      btnRestart.addEventListener('click', () => {
+        currentScenarioIndex = 0;
+        correctAnswers = 0;
+        loadScenario();
+      });
+
+      // Navigasi Utama
+      document.querySelector('#navBackButton').addEventListener('click', () => {
+        window.location.href = 'rambu.html';
+      });
+
+      document.querySelector('#navHomeButton').addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      document.querySelector('#btnGoHazard').addEventListener('click', () => {
+        window.location.href = 'hazard.html';
+      });
+
+      // Efek Hover yang aman dari interupsi kelas tersembunyi
+      document.querySelectorAll('.clickable, #btnOpt1, #btnOpt2, #btnNext, #btnRestart, #btnGoHazard').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          if (el.classList.contains('clickable')) {
+            el.setAttribute('scale', '1.05 1.05 1.05');
+          }
+        });
+        el.addEventListener('mouseleave', () => {
+          if (el.classList.contains('clickable')) {
+            el.setAttribute('scale', '1 1 1');
+          }
+        });
+      });
+
+      // State awal (hijau sebagai warna netral sebelum mulai)
+      setTrafficLight('green');
+    })();
+  </script>
+</body>
+
+</html>

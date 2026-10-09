@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIMReadyVR - Kuis Keselamatan Jalan</title>
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+</head>
+
+<body style="margin:0">
+    <a-scene background="color: #DCEAF4">
+        <a-sky color="#DCEAF4"></a-sky>
+        <a-plane position="0 0 -7" rotation="-90 0 0" width="40" height="40" color="#A9C89A"></a-plane>
+        <a-plane position="0 0.02 -7" rotation="-90 0 0" width="8" height="30" color="#42464B"></a-plane>
+        <a-text value="SIMReadyVR" position="0 4 -6" align="center" color="#16324F" width="8"
+            scale="1.3 1.3 1.3"></a-text>
+        <a-text value="KUIS KESELAMATAN JALAN" position="0 3.55 -6" align="center" color="#16324F" width="7"></a-text>
+        <a-entity id="quizPanel" position="0 2 -4">
+            <a-plane width="7.2" height="4.5" color="#FFFFFF"></a-plane>
+            <a-text id="progress" value="" position="0 1.7 0.08" align="center" color="#607D8B" width="6"></a-text>
+            <a-text id="question" value="" position="-3 1.1 0.08" align="left" anchor="left" baseline="top"
+                color="#17202A" width="6"></a-text>
+            <a-box id="answerA" class="clickable" position="0 0.25 0.22" width="6.1" height="0.55" depth="0.15"
+                color="#2878B5"></a-box>
+            <a-text id="answerAText" value="" position="-2.8 0.25 0.34" align="left" color="#FFFFFF"
+                width="5.5"></a-text>
+            <a-box id="answerB" class="clickable" position="0 -0.5 0.22" width="6.1" height="0.55" depth="0.15"
+                color="#2878B5"></a-box>
+            <a-text id="answerBText" value="" position="-2.8 -0.5 0.34" align="left" color="#FFFFFF"
+                width="5.5"></a-text>
+            <a-box id="answerC" class="clickable" position="0 -1.25 0.22" width="6.1" height="0.55" depth="0.15"
+                color="#2878B5"></a-box>
+            <a-text id="answerCText" value="" position="-2.8 -1.25 0.34" align="left" color="#FFFFFF"
+                width="5.5"></a-text>
+            <a-text id="feedback" value="Pilih satu jawaban." position="0 -1.85 0.1" align="center" color="#17202A"
+                width="6.2"></a-text>
+        </a-entity>
+        <a-entity id="resultPanel" visible="false" position="0 2 -4">
+            <a-plane width="6.5" height="3.4" color="#FFFFFF"></a-plane>
+            <a-text value="KUIS SELESAI!" position="0 0.9 0.08" align="center" color="#16324F" width="5"></a-text>
+            <a-text id="scoreText" value="" position="0 0.25 0.08" align="center" color="#17202A" width="5"></a-text>
+            <a-text value="Terima kasih sudah belajar keselamatan jalan." position="0 -0.25 0.08" align="center"
+                color="#17202A" width="5.5"></a-text>
+            <a-box id="retryButton" class="clickable" position="-1.3 -1 0.22" width="2.2" height="0.6" depth="0.15"
+                color="#2878B5"></a-box>
+            <a-text value="ULANGI" position="-1.3 -1 0.34" align="center" color="#FFFFFF" width="3"></a-text>
+            <a-box id="homeButton" class="clickable" position="1.3 -1 0.22" width="2.2" height="0.6" depth="0.15"
+                color="#34495E"></a-box>
+            <a-text value="HOME" position="1.3 -1 0.34" align="center" color="#FFFFFF" width="3"></a-text>
+        </a-entity>
+        <a-box id="backButton" class="clickable" position="-2.8 0.55 -2.7" width="1.5" height="0.55" depth="0.18"
+            color="#34495E"></a-box>
+        <a-text value="KEMBALI" position="-2.8 0.55 -2.57" align="center" color="#FFFFFF" width="2.2"></a-text>
+        <a-entity cursor="rayOrigin: mouse; fuse: false"
+            raycaster="objects: .clickable; far: 40; interval: 0"></a-entity>
+        <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+    </a-scene>
+    <script>
+        (() => {
+            const qs = [
+                ["Saat melihat kerucut lalu lintas, apa yang sebaiknya dilakukan?", ["A. Mempercepat kendaraan", "B. Mengurangi kecepatan dan mengikuti jalur aman", "C. Mengabaikannya"], 1, "Kurangi kecepatan dan ikuti jalur yang tersedia."],
+                ["Apa arti penghalang yang menutup sebagian jalan?", ["A. Jalur bebas dilalui", "B. Hanya hiasan", "C. Jangan melewati area yang ditutup"], 2, "Jangan menerobos penghalang; ikuti rambu dan petunjuk."],
+                ["Apa tindakan aman saat ada pejalan kaki di dekat jalan?", ["A. Waspada, kurangi kecepatan, dan beri jalan", "B. Membunyikan klakson terus", "C. Menambah kecepatan"], 0, "Waspadai pejalan kaki dan beri ruang untuk menyeberang."],
+                ["Apa yang perlu dilakukan sebelum berpindah jalur?", ["A. Langsung membelok", "B. Pastikan kondisi sekitar aman", "C. Tidak perlu melihat sekitar"], 1, "Periksa kondisi sekitar dan berpindah hanya jika aman."],
+                ["Kebiasaan mana yang paling aman saat berkendara?", ["A. Menggunakan ponsel", "B. Mengikuti kendaraan sangat dekat", "C. Fokus dan menjaga jarak aman"], 2, "Fokus di jalan dan jaga jarak aman."]
+            ];
+            let i = 0, score = 0, answered = false;
+            const panel = document.querySelector('#quizPanel'), result = document.querySelector('#resultPanel');
+            const boxes = ['A', 'B', 'C'].map(x => document.querySelector('#answer' + x));
+            const texts = ['A', 'B', 'C'].map(x => document.querySelector('#answer' + x + 'Text'));
+            function render() {
+                answered = false; const q = qs[i];
+                document.querySelector('#progress').setAttribute('value', 'Pertanyaan ' + (i + 1) + ' dari ' + qs.length);
+                document.querySelector('#question').setAttribute('value', q[0]);
+                q[1].forEach((v, j) => { texts[j].setAttribute('value', v); boxes[j].setAttribute('color', '#2878B5'); });
+                document.querySelector('#feedback').setAttribute('value', 'Pilih satu jawaban.');
+            }
+            function choose(j) {
+                if (answered) return; answered = true; const q = qs[i], ok = j === q[2]; if (ok) score++;
+                boxes[j].setAttribute('color', ok ? '#168447' : '#C62828');
+                document.querySelector('#feedback').setAttribute('value', (ok ? 'Benar! ' : 'Belum tepat. ') + q[3]);
+                setTimeout(() => { i++; if (i < qs.length) render(); else { panel.setAttribute('visible', false); result.setAttribute('visible', true); document.querySelector('#scoreText').setAttribute('value', 'Nilai kamu: ' + score + ' dari ' + qs.length); } }, 1300);
+            }
+            boxes.forEach((b, j) => b.addEventListener('click', () => choose(j)));
+            document.querySelector('#retryButton').addEventListener('click', () => { i = 0; score = 0; result.setAttribute('visible', false); panel.setAttribute('visible', true); render(); });
+            document.querySelector('#homeButton').addEventListener('click', () => location.href = 'index.html');
+            document.querySelector('#backButton').addEventListener('click', () => location.href = 'hazard.html');
+            render();
+        })();
+    </script>
+</body>
+
+</html>
