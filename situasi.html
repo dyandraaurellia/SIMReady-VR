@@ -4,323 +4,991 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIMReady VR - Simulasi Persimpangan</title>
+  <title>SIMReady VR - Simulasi Persimpangan Lampu Lalu Lintas</title>
+  <meta name="description"
+    content="Simulasi 3D persimpangan empat arah SIMReady VR: latih keputusan aman saat lampu merah, kuning, dan hijau.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
   <style>
+    :root {
+      --glass: rgba(12, 18, 30, 0.74);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --text: #f4f7fb;
+      --muted: #b7c2d3;
+      --accent: #33d6ff;
+      --ok: #2ee59d;
+      --bad: #ff4d6a;
+      --warn: #ffc93c;
+      --btn: rgba(255, 255, 255, 0.08);
+      --btn-hover: rgba(255, 255, 255, 0.18);
+    }
+
     html,
     body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background: #a9d3ef;
+      font-family: 'Outfit', system-ui, sans-serif;
+      color: var(--text);
+    }
+
+    /* ---------- Lapisan UI 2D (di atas canvas A-Frame) ---------- */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      /* hanya elemen interaktif yang menangkap klik */
+    }
+
+    #hud button,
+    #hud .panel,
+    #hud .topbar>* {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      font: 600 14px/1 'Outfit', sans-serif;
+      letter-spacing: .06em;
+      color: var(--text);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      padding: 10px 18px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(30, 42, 64, .9);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 16px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .status h1 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      color: var(--accent);
+    }
+
+    .status .sep {
+      width: 1px;
+      height: 16px;
+      background: var(--glass-border);
+    }
+
+    .light-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .light-pill i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #777;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .light-pill.red {
+      color: #ff5a5a;
+    }
+
+    .light-pill.yellow {
+      color: var(--warn);
+    }
+
+    .light-pill.green {
+      color: var(--ok);
+    }
+
+    .light-pill.red i,
+    .light-pill.yellow i,
+    .light-pill.green i {
+      background: currentColor;
+    }
+
+    /* ---------- Panel bawah ringkas ---------- */
+    .panel {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      width: min(940px, calc(100% - 24px));
+      box-sizing: border-box;
+      display: none;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-left: 4px solid var(--accent);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    }
+
+    .panel.is-visible {
+      display: grid;
+      animation: rise .35s ease-out;
+    }
+
+    .panel.is-correct {
+      border-left-color: var(--ok);
+    }
+
+    .panel.is-wrong {
+      border-left-color: var(--bad);
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 14px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+
+    .panel .eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .panel h2 {
+      margin: 2px 0 4px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      color: var(--accent);
+    }
+
+    .panel.is-correct h2 {
+      color: var(--ok);
+    }
+
+    .panel.is-wrong h2 {
+      color: var(--bad);
+    }
+
+    .panel p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      font: 700 14px/1.15 'Outfit', sans-serif;
+      letter-spacing: .04em;
+      color: var(--text);
+      background: var(--btn);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      min-width: 150px;
+      max-width: 230px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--btn-hover);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(51, 214, 255, .2);
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: default;
+    }
+
+    .btn .key {
+      flex: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(51, 214, 255, .18);
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #12b886, #0ca678);
+      border-color: transparent;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, #228be6, #1c7ed6);
+      border-color: transparent;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .btn[hidden] {
+      display: none;
+    }
+
+    /* ---------- Efek & loader ---------- */
+    #flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(255, 40, 70, 0) 40%, rgba(255, 40, 70, .55) 100%);
+      opacity: 0;
+      transition: opacity .25s ease;
+    }
+
+    #flash.on {
+      opacity: 1;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #0d1626, #16304d);
+      transition: opacity .5s ease;
+    }
+
+    #loader.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loader .spin {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 14px;
+      border: 4px solid rgba(255, 255, 255, .15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .panel {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .actions {
+        justify-content: stretch;
+      }
+
+      .btn {
+        flex: 1;
+        max-width: none;
+        min-width: 0;
+      }
+
+      .status .hide-sm {
+        display: none;
+      }
     }
   </style>
+
+  <script>
+    /* ============================================================
+       DIMENSI DUNIA (satuan: meter)
+       Lalu lintas lajur kiri (Indonesia). Pusat persimpangan di (0,0,0).
+       Pemain datang dari selatan (+Z) menuju utara (-Z), lajur x < 0.
+       ============================================================ */
+    window.ROAD = {
+      H: 6.6,      // setengah lebar jalan (2 lajur x 3.3 m per arah)
+      L: 3.3,      // lebar lajur
+      SW: 4.5,     // lebar trotoar
+      R: 160,      // panjang ruas jalan dari pusat
+      STOP: 11.6   // posisi garis henti (jarak dari pusat)
+    };
+
+    /* Menyamakan skala & posisi model kendaraan .glb:
+       panjang diskalakan ke ukuran nyata, roda tepat di permukaan, titik pusat di tengah. */
+    AFRAME.registerComponent('vehicle-model', {
+      schema: { length: { type: 'number', default: 4.5 } },
+      init: function () {
+        this.el.addEventListener('model-loaded', () => {
+          const mesh = this.el.getObject3D('mesh');
+          if (!mesh) return;
+          this.el.object3D.updateMatrixWorld(true);
+          const inv = new THREE.Matrix4().copy(this.el.object3D.matrixWorld).invert();
+          const box = new THREE.Box3();
+          const tmp = new THREE.Box3();
+          const m = new THREE.Matrix4();
+          mesh.traverse(o => {
+            if (!o.isMesh) return;
+            o.castShadow = true;
+            o.receiveShadow = true;
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+            tmp.copy(o.geometry.boundingBox).applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld));
+            box.union(tmp);
+          });
+          const size = box.getSize(new THREE.Vector3());
+          const longAxis = Math.max(size.x, size.z);
+          const s = this.data.length / longAxis;
+          // Model Kenney menghadap +Z; bila sumbu panjang di X, putar agar sejajar Z.
+          if (size.x > size.z) mesh.rotation.y = -Math.PI / 2;
+          const c = box.getCenter(new THREE.Vector3());
+          mesh.scale.setScalar(s);
+          const off = new THREE.Vector3(-c.x * s, -box.min.y * s, -c.z * s);
+          if (size.x > size.z) off.set(c.z * s, -box.min.y * s, -c.x * s);
+          mesh.position.copy(off);
+        });
+      }
+    });
+
+    /* Kepala lampu lalu lintas 3 lensa (merah-atas, kuning-tengah, hijau-bawah), menghadap +Z lokal */
+    function buildSignalHead(parent, prefix, x, y, z) {
+      const head = document.createElement('a-entity');
+      head.setAttribute('position', `${x} ${y} ${z}`);
+      head.setAttribute('scale', '1.3 1.3 1.3');
+      const add = (attrs) => {
+        const e = document.createElement('a-entity');
+        Object.keys(attrs).forEach(k => e.setAttribute(k, attrs[k]));
+        head.appendChild(e);
+        return e;
+      };
+      add({ geometry: 'primitive: box; width: 0.66; height: 1.5; depth: 0.04', material: 'color: #0d0f12; roughness: 0.9', position: '0 0 -0.19' });
+      add({ geometry: 'primitive: box; width: 0.46; height: 1.3; depth: 0.34', material: 'color: #22272e; roughness: 0.6', position: '0 0 0' });
+      [['Red', 0.4], ['Yellow', 0], ['Green', -0.4]].forEach(([c, ly]) => {
+        add({ class: `${prefix}${c}`, geometry: 'primitive: circle; radius: 0.15; segments: 24', material: 'shader: standard; color: #222', position: `0 ${ly} 0.175` });
+        add({
+          geometry: 'primitive: cylinder; radius: 0.19; height: 0.2; openEnded: true; thetaStart: 90; thetaLength: 180; segmentsRadial: 12',
+          material: 'color: #15181c; side: double', rotation: '90 0 0', position: `0 ${ly + 0.01} 0.27`
+        });
+      });
+      parent.appendChild(head);
+    }
+
+    /* Tiang lampu lalu lintas: tiang di titik asal, lengan ke +X lokal, kepala lampu menghadap +Z lokal */
+    AFRAME.registerComponent('signal-mast', {
+      schema: {
+        group: { default: 'tl' },          // 'tl' = arah pemain, 'x' = arah silang
+        arm: { type: 'number', default: 6.4 },
+        heads: { type: 'array', default: ['2.25', '5.55'] },
+        height: { type: 'number', default: 6.3 }
+      },
+      init: function () {
+        const d = this.data, el = this.el;
+        const pole = document.createElement('a-entity');
+        pole.setAttribute('geometry', `primitive: cylinder; radius: 0.1; height: ${d.height}; segmentsRadial: 10`);
+        pole.setAttribute('material', 'color: #5b636e; metalness: 0.4; roughness: 0.5');
+        pole.setAttribute('position', `0 ${d.height / 2} 0`);
+        pole.setAttribute('shadow', 'cast: true');
+        el.appendChild(pole);
+        if (d.arm > 0) {
+          const arm = document.createElement('a-entity');
+          arm.setAttribute('geometry', `primitive: cylinder; radius: 0.07; height: ${d.arm}; segmentsRadial: 8`);
+          arm.setAttribute('material', 'color: #5b636e; metalness: 0.4; roughness: 0.5');
+          arm.setAttribute('rotation', '0 0 90');
+          arm.setAttribute('position', `${d.arm / 2} ${d.height - 0.25} 0`);
+          el.appendChild(arm);
+          d.heads.forEach(hx => buildSignalHead(el, d.group, parseFloat(hx), d.height - 1.25, 0.05));
+        } else {
+          buildSignalHead(el, d.group, 0, d.height - 0.95, 0.35);
+        }
+      }
+    });
+
+    /* Membangun persimpangan secara terstruktur (Three.js murni, satu kali):
+       aspal, trotoar + kerb, taman, marka (instanced), pohon, dan gedung low-poly. */
+    AFRAME.registerComponent('intersection-builder', {
+      init: function () {
+        const T = THREE;
+        const { H, L, SW, R, STOP } = window.ROAD;
+        const g = new T.Group();
+
+        const canvasTex = (w, h, draw) => {
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          draw(c.getContext('2d'), w, h);
+          const t = new T.CanvasTexture(c);
+          t.colorSpace = T.SRGBColorSpace;
+          t.wrapS = t.wrapT = T.RepeatWrapping;
+          t.anisotropy = 8;
+          return t;
+        };
+        const withRepeat = (tex, rx, ry) => { const t = tex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; };
+
+        // --- Tekstur prosedural ---
+        const asphaltTex = canvasTex(256, 256, (x, w, h) => {
+          x.fillStyle = '#44474d'; x.fillRect(0, 0, w, h);
+          for (let i = 0; i < 2600; i++) {
+            const v = 50 + Math.random() * 40;
+            x.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + Math.random() * 0.4})`;
+            x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+          }
+        });
+        const paveTex = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = '#cfccc4'; x.fillRect(0, 0, w, h);
+          x.strokeStyle = '#b3b0a8'; x.lineWidth = 2;
+          for (let i = 0; i <= w; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+        });
+        const facadeCache = {};
+        const facadeTex = (wall) => facadeCache[wall] || (facadeCache[wall] = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = wall; x.fillRect(0, 0, w, h);
+          x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(0, 118, w, 10);
+          x.fillStyle = '#eef0f2'; x.fillRect(24, 20, 80, 82);
+          const gr = x.createLinearGradient(0, 24, 0, 98);
+          gr.addColorStop(0, '#9cc3dd'); gr.addColorStop(1, '#4b6b84');
+          x.fillStyle = gr; x.fillRect(28, 24, 72, 74);
+          x.fillStyle = '#eef0f2'; x.fillRect(62, 24, 4, 74);
+          x.fillStyle = 'rgba(255,255,255,0.28)'; x.fillRect(28, 24, 72, 9);
+        }));
+
+        const std = (opts) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.92, metalness: 0 }, opts));
+        const plane = (w, d, mat, x, y, z) => {
+          const geo = new T.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
+          const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m;
+        };
+        const box = (w, h, d, mat, x, y, z, cast) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z); m.receiveShadow = true; m.castShadow = !!cast; g.add(m); return m;
+        };
+
+        // --- Tanah dasar (rumput hanya di luar jalan & trotoar) ---
+        plane(700, 700, std({ color: '#6f9e52' }), 0, -0.05, 0);
+
+        // --- Aspal: ruas U-S utuh, ruas B-T dipotong agar tidak tumpang tindih (anti z-fighting) ---
+        plane(2 * H, 2 * R, std({ map: withRepeat(asphaltTex, 2 * H / 6, 2 * R / 6) }), 0, 0.01, 0);
+        const ewLen = R - H;
+        const ewMat = std({ map: withRepeat(asphaltTex, ewLen / 6, 2 * H / 6) });
+        plane(ewLen, 2 * H, ewMat, (R + H) / 2, 0.01, 0);
+        plane(ewLen, 2 * H, ewMat, -(R + H) / 2, 0.01, 0);
+
+        // --- Trotoar, kerb, dan taman di 4 kuadran ---
+        const c = (R + H) / 2;
+        const paveMat = std({ map: withRepeat(paveTex, ewLen / 2, ewLen / 2) });
+        const curbMat = std({ color: '#e4e2dc' });
+        const lawnMat = std({ color: '#79aa5a' });
+        const inner = H + SW, lawnLen = R - inner, lc = (R + inner) / 2;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          box(ewLen, 0.15, ewLen, paveMat, sx * c, 0.075, sz * c);
+          box(0.3, 0.18, ewLen, curbMat, sx * (H + 0.15), 0.09, sz * c);
+          box(ewLen - 0.3, 0.18, 0.3, curbMat, sx * (c + 0.15), 0.09, sz * (H + 0.15));
+          box(lawnLen, 0.2, lawnLen, lawnMat, sx * lc, 0.1, sz * lc);
+        });
+
+        // --- Marka jalan (satu InstancedMesh, sedikit di atas aspal + polygonOffset) ---
+        const rects = [];
+        const approach = (k) => {
+          const out = [];
+          const p = (x, z, w, d) => out.push({ x, z, w, d });
+          // Zebra cross: z dari H+1 s.d. H+4 (lebar 3 m), strip 0.5 m
+          for (let x = -H + 0.75; x <= H - 0.74; x += 1.0) p(x, H + 2.5, 0.5, 3.0);
+          // Garis henti (hanya lajur masuk, x<0)
+          const x1 = -H + 0.3, x2 = -0.3;
+          p((x1 + x2) / 2, STOP - 0.2 + 0.0, x2 - x1, 0.45);
+          // Garis tengah ganda menerus dekat persimpangan, lalu putus-putus
+          const z0 = H + 4.5, zMid = H + 40;
+          p(-0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+          p(0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+          for (let z = zMid + 4; z < R - 4; z += 8) p(0, z + 1.5, 0.15, 3);
+          // Pembagi lajur: menerus 15 m sebelum garis henti, lalu putus-putus
+          [-L, L].forEach(lx => {
+            p(lx, (z0 + H + 20) / 2, 0.12, H + 20 - z0);
+            for (let z = H + 24; z < R - 4; z += 9) p(lx, z + 1.5, 0.12, 3);
+          });
+          // Garis tepi
+          [-(H - 0.3), H - 0.3].forEach(ex => p(ex, (z0 + R) / 2, 0.15, R - z0));
+          const th = k * Math.PI / 2, cs = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th));
+          out.forEach(r => rects.push({
+            x: r.x * cs + r.z * sn,
+            z: -r.x * sn + r.z * cs,
+            w: k % 2 ? r.d : r.w,
+            d: k % 2 ? r.w : r.d
+          }));
+        };
+        [0, 1, 2, 3].forEach(approach);
+        const mGeo = new T.PlaneGeometry(1, 1); mGeo.rotateX(-Math.PI / 2);
+        const mMat = std({ color: '#f3f3ee', roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const marks = new T.InstancedMesh(mGeo, mMat, rects.length);
+        const mx = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), scl = new T.Vector3();
+        rects.forEach((r, i) => { pos.set(r.x, 0.025, r.z); scl.set(r.w, 1, r.d); mx.compose(pos, q, scl); marks.setMatrixAt(i, mx); });
+        marks.receiveShadow = true;
+        g.add(marks);
+
+        // --- Pohon low-poly di trotoar (mulai 20 m dari pusat agar tidak menutupi lampu & zebra) ---
+        const trees = [];
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          for (let d = 22; d < 120; d += 11) {
+            // Ruas selatan (jalur pemain): mulai 50 m agar pohon tidak menutupi pandangan kamera
+            if (!(sz > 0 && d < 50)) trees.push([sx * (H + 3.3), sz * d]);
+            trees.push([sx * d, sz * (H + 3.3)]);
+          }
+        });
+        const trunk = new T.InstancedMesh(new T.CylinderGeometry(0.14, 0.2, 2.4, 6), std({ color: '#6b4a32' }), trees.length);
+        const crown = new T.InstancedMesh(new T.IcosahedronGeometry(1.6, 0), std({ color: '#ffffff', flatShading: true }), trees.length);
+        const greens = ['#4f8f3a', '#5d9c43', '#447f35', '#6aa64b'].map(h => new T.Color(h));
+        trees.forEach(([tx, tz], i) => {
+          const s = 0.85 + ((i * 37) % 10) / 25;
+          pos.set(tx, 1.35, tz); scl.set(1, 1, 1); mx.compose(pos, q, scl); trunk.setMatrixAt(i, mx);
+          pos.set(tx, 2.6 + 1.5 * s, tz); scl.set(s, s * 1.1, s); mx.compose(pos, q, scl); crown.setMatrixAt(i, mx);
+          crown.setColorAt(i, greens[i % greens.length]);
+        });
+        trunk.castShadow = crown.castShadow = true;
+        g.add(trunk, crown);
+
+        // --- Gedung low-poly warna-warni (mundur dari trotoar, membingkai jalan) ---
+        const walls = ['#f2a65a', '#5fc4b8', '#f6d55c', '#ed6a5a', '#9bc1bc', '#e8d5b7', '#8fb8de', '#c3a6d8'];
+        const roofMat = std({ color: '#7d8590' });
+        let seed = 7;
+        const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+        const building = (cx, cz, w, d, h) => {
+          const wall = walls[Math.floor(rnd() * walls.length)];
+          const ft = facadeTex(wall);
+          const mFront = std({ map: withRepeat(ft, Math.max(1, Math.round(w / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const mSide = std({ map: withRepeat(ft, Math.max(1, Math.round(d / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const b = box(w, h, d, [mSide, mSide, roofMat, roofMat, mFront, mFront], cx, h / 2, cz, true);
+          box(w + 0.4, 0.4, d + 0.4, std({ color: '#d9d6cf' }), cx, h + 0.2, cz, false); // lis atap
+          return b;
+        };
+        const set = 14.5;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          building(sx * (set + 6), sz * (set + 6), 12, 12, 9 + rnd() * 10);
+          for (let p = set + 14; p < 120;) {
+            const w = 10 + rnd() * 5, d = 10 + rnd() * 4;
+            building(sx * (set + d / 2), sz * (p + w / 2), d, w, 7 + rnd() * 15);
+            const w2 = 10 + rnd() * 5, d2 = 10 + rnd() * 4;
+            building(sx * (p + w2 / 2), sz * (set + d2 / 2), w2, d2, 7 + rnd() * 15);
+            p += Math.max(w, w2) + 2.5;
+          }
+        });
+
+        this.el.setObject3D('city', g);
+      }
+    });
+  </script>
 </head>
 
 <body>
-  <a-scene background="color: #87CEEB">
-    <a-assets>
-      <a-asset-item id="mdlCrossroad" src="assets/models/GLB%20format/road-crossroad.glb"></a-asset-item>
-      <a-asset-item id="mdlStraight" src="assets/models/GLB%20format/road-straight.glb"></a-asset-item>
-      <a-asset-item id="mdlCrossing" src="assets/models/GLB%20format/road-crossing.glb"></a-asset-item>
+  <!-- ===================== DUNIA 3D (tanpa elemen UI) ===================== -->
+  <a-scene id="scene" renderer="colorManagement: true; antialias: true" shadow="type: pcfsoft"
+    vr-mode-ui="enabled: false" fog="type: linear; color: #cfe6f5; near: 70; far: 230" background="color: #a9d3ef">
+    <a-assets timeout="15000">
       <a-asset-item id="mdlSedan" src="assets/models/car-kit/sedan.glb"></a-asset-item>
       <a-asset-item id="mdlTaxi" src="assets/models/car-kit/taxi.glb"></a-asset-item>
+      <a-asset-item id="mdlPolice" src="assets/models/car-kit/police.glb"></a-asset-item>
       <a-asset-item id="mdlAmbulance" src="assets/models/car-kit/ambulance.glb"></a-asset-item>
+      <a-asset-item id="mdlSuv" src="assets/models/car-kit/suv.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Pencahayaan untuk visual lebih realistis -->
-    <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.6" position="-5 10 5" castShadow="true"></a-light>
+    <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
 
-    <!-- Mouse Cursor -->
-    <a-entity id="mouseCursor" cursor="rayOrigin: mouse; fuse: false"
-      raycaster="objects: .clickable; far: 40; interval: 0"></a-entity>
-
-    <a-camera position="0 1.6 1"></a-camera>
-
-    <!-- Lingkungan Dasar -->
-    <a-sky color="#87CEEB"></a-sky>
-
-    <!-- Rumput -->
-    <a-plane position="0 0 -10" rotation="-90 0 0" width="100" height="100" color="#5C9E45"></a-plane>
-
-    <!-- Lapisan jalan cadangan (jika tile GLB tidak menutupi dengan sempurna) -->
-    <a-plane position="0 0.01 -10" rotation="-90 0 0" width="8" height="40" color="#42464B"></a-plane>
-    <a-plane position="0 0.02 -10" rotation="-90 90 0" width="8" height="40" color="#42464B"></a-plane>
-
-    <!-- Jalan 3D (Kenney City Kit) -->
-    <a-entity position="0 0.03 -10">
-      <a-entity gltf-model="#mdlCrossroad" position="0 0 0"></a-entity>
-      <a-entity gltf-model="#mdlCrossing" position="0 0 -4" rotation="0 0 0"></a-entity>
-      <a-entity gltf-model="#mdlStraight" position="0 0 4" rotation="0 0 0"></a-entity>
-      <a-entity gltf-model="#mdlCrossing" position="4 0 0" rotation="0 90 0"></a-entity>
-      <a-entity gltf-model="#mdlStraight" position="-4 0 0" rotation="0 90 0"></a-entity>
+    <!-- Pencahayaan -->
+    <a-entity light="type: hemisphere; color: #eaf4ff; groundColor: #7d8a68; intensity: 1.6"></a-entity>
+    <a-entity id="lightTarget" position="0 0 5"></a-entity>
+    <a-entity position="35 50 30"
+      light="type: directional; color: #fff4e0; intensity: 2.4; target: #lightTarget; castShadow: true; shadowMapWidth: 2048; shadowMapHeight: 2048; shadowCameraLeft: -50; shadowCameraRight: 50; shadowCameraTop: 50; shadowCameraBottom: -50; shadowCameraNear: 1; shadowCameraFar: 180; shadowBias: -0.0005">
     </a-entity>
 
-    <!-- Lampu Lalu Lintas Interaktif (Menggunakan Primitive agar mudah diganti warna/fase oleh JS) -->
-    <a-entity id="trafficLight" position="3 0 -13" rotation="0 -45 0">
-      <a-cylinder position="0 2 0" radius="0.08" height="4" color="#263238"></a-cylinder>
-      <a-box position="0 3.5 0" width="0.6" height="1.6" depth="0.5" color="#17202A"></a-box>
-      <!-- Indikator Lampu -->
-      <a-sphere id="tlRed" radius="0.18" position="0 4.0 0.28" color="#550000"></a-sphere>
-      <a-sphere id="tlYellow" radius="0.18" position="0 3.5 0.28" color="#555500"></a-sphere>
-      <a-sphere id="tlGreen" radius="0.18" position="0 3.0 0.28" color="#005500"></a-sphere>
-      <!-- Pelindung Lampu -->
-      <a-cylinder position="0 4.1 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
-        theta-length="180"></a-cylinder>
-      <a-cylinder position="0 3.6 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
-        theta-length="180"></a-cylinder>
-      <a-cylinder position="0 3.1 0.3" rotation="90 0 0" radius="0.22" height="0.1" color="#17202A"
-        theta-length="180"></a-cylinder>
+    <!-- Persimpangan: aspal, marka, zebra, trotoar, kerb, pohon, gedung -->
+    <a-entity id="city" intersection-builder></a-entity>
+
+    <!-- Lampu lalu lintas
+         tl* = arah pemain (utara-selatan), x* = arah silang (barat-timur) -->
+    <a-entity id="signalNearPlayer" position="-7.4 0.15 11.4" signal-mast="group: tl; arm: 0; height: 3.7"></a-entity>
+    <a-entity id="signalFarPlayer" position="-7.3 0.15 -7.3" rotation="0 0 0" signal-mast="group: tl"></a-entity>
+    <a-entity id="signalSouthbound" position="7.3 0.15 7.3" rotation="0 180 0" signal-mast="group: tl"></a-entity>
+    <a-entity id="signalEastbound" position="7.3 0.15 -7.3" rotation="0 -90 0" signal-mast="group: x"></a-entity>
+    <a-entity id="signalWestbound" position="-7.3 0.15 7.3" rotation="0 90 0" signal-mast="group: x"></a-entity>
+
+    <!-- Kendaraan lain: masing-masing di lajurnya, berhenti di belakang garis henti -->
+    <!-- Polisi: dari utara menuju selatan, lajur dalam (x = +1.65) -->
+    <a-entity id="policeCar" position="1.65 0.01 -14.7" rotation="0 0 0">
+      <a-entity gltf-model="#mdlPolice" vehicle-model="length: 4.7"></a-entity>
+    </a-entity>
+    <!-- Ambulans: dari barat menuju timur, lajur luar (z = -4.95) -->
+    <a-entity id="ambulance" position="-15.3 0.01 -4.95" rotation="0 90 0">
+      <a-entity gltf-model="#mdlAmbulance" vehicle-model="length: 5.6"></a-entity>
+    </a-entity>
+    <!-- SUV: dari timur menuju barat, lajur dalam (z = +1.65) -->
+    <a-entity id="eastCar" position="14.6 0.01 1.65" rotation="0 -90 0">
+      <a-entity gltf-model="#mdlSuv" vehicle-model="length: 4.6"></a-entity>
+    </a-entity>
+    <!-- Taksi risiko: dari timur menuju barat, lajur luar (z = +4.95); muncul hanya saat keputusan berbahaya -->
+    <a-entity id="sideCar" position="70 0.01 4.95" rotation="0 -90 0" visible="false">
+      <a-entity gltf-model="#mdlTaxi" vehicle-model="length: 4.5"></a-entity>
     </a-entity>
 
-    <!-- Kendaraan 3D (Kenney Car Kit) -->
-    <a-entity gltf-model="#mdlTaxi" position="-2.5 0.04 -14" rotation="0 90 0"></a-entity>
-    <a-entity gltf-model="#mdlSedan" position="2.5 0.04 -6" rotation="0 -90 0"></a-entity>
-    <a-entity gltf-model="#mdlAmbulance" position="-8 0.04 -8.5" rotation="0 0 0"></a-entity>
-
-    <!-- PANEL UTAMA SIMULASI -->
-    <a-entity id="mainUI" position="0 2 -3.5">
-      <a-plane width="7.5" height="3.5" color="#FFFFFF" material="shader: flat; opacity: 0.96"></a-plane>
-
-      <a-text id="uiTitle" value="SIMULASI KEPUTUSAN" position="0 1.2 0.05" align="center" width="6.5" color="#16324F"
-        wrap-count="30"></a-text>
-      <a-text id="uiBody" value="Amati kondisi persimpangan di depan dan pilih tindakan yang paling aman."
-        position="0 0.4 0.05" align="center" width="6.5" color="#17202A" wrap-count="45"></a-text>
-
-      <!-- Tombol Mulai -->
-      <a-box id="btnStart" class="clickable" position="0 -0.8 0.1" width="3.2" height="0.65" depth="0.1"
-        color="#168447">
-        <a-text value="MULAI SIMULASI" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
-      </a-box>
-
-      <!-- Tombol Pilihan -->
-      <a-box id="btnOpt1" position="-1.8 -0.8 0.1" visible="false" scale="0 0 0" width="3.4" height="0.75" depth="0.1"
-        color="#34495E">
-        <a-text class="btn-text" value="OPSI 1" position="0 0 0.06" align="center" color="#FFFFFF" width="3.5"
-          wrap-count="20"></a-text>
-      </a-box>
-
-      <a-box id="btnOpt2" position="1.8 -0.8 0.1" visible="false" scale="0 0 0" width="3.4" height="0.75" depth="0.1"
-        color="#34495E">
-        <a-text class="btn-text" value="OPSI 2" position="0 0 0.06" align="center" color="#FFFFFF" width="3.5"
-          wrap-count="20"></a-text>
-      </a-box>
-
-      <!-- Tombol Lanjut Skenario -->
-      <a-box id="btnNext" position="0 -0.8 0.1" visible="false" scale="0 0 0" width="2.8" height="0.65" depth="0.1"
-        color="#2878B5">
-        <a-text value="LANJUTKAN" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
-      </a-box>
-
-      <!-- Tombol Ulangi -->
-      <a-box id="btnRestart" position="-1.6 -0.8 0.1" visible="false" scale="0 0 0" width="2.8" height="0.65"
-        depth="0.1" color="#168447">
-        <a-text value="ULANGI SIMULASI" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
-      </a-box>
-
-      <!-- Tombol Pindah Tahap -->
-      <a-box id="btnGoHazard" position="1.6 -0.8 0.1" visible="false" scale="0 0 0" width="3" height="0.65" depth="0.1"
-        color="#2878B5">
-        <a-text value="LANJUT KE BAHAYA" position="0 0 0.06" align="center" color="#FFFFFF" width="4"></a-text>
-      </a-box>
+    <!-- Pemain: mobil + kamera orang ketiga -->
+    <a-entity id="playerRig" position="-1.65 0 30">
+      <a-entity position="0 0.01 0" rotation="0 180 0">
+        <a-entity gltf-model="#mdlSedan" vehicle-model="length: 4.5"></a-entity>
+      </a-entity>
+      <!-- Kamera 9.5 m di belakang, 3.6 m di atas, menunduk 9° → mobil di sepertiga bawah, persimpangan di tengah -->
+      <a-entity id="camPivot" position="0 3.6 9.5" rotation="-9 0 0">
+        <a-camera id="cam" position="0 0 0" fov="55" near="0.3" far="600" wasd-controls-enabled="false"
+          look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"></a-camera>
+      </a-entity>
     </a-entity>
-
-    <!-- Navigasi Bawah -->
-    <a-box id="navBackButton" class="clickable" position="-3.2 0.5 -3" width="1.8" height="0.55" depth="0.18"
-      color="#34495E"></a-box>
-    <a-text value="KEMBALI" position="-3.2 0.5 -2.87" align="center" color="#FFFFFF" width="2.2"></a-text>
-
-    <a-box id="navHomeButton" class="clickable" position="3.2 0.5 -3" width="1.8" height="0.55" depth="0.18"
-      color="#34495E"></a-box>
-    <a-text value="HOME" position="3.2 0.5 -2.87" align="center" color="#FFFFFF" width="2"></a-text>
-
   </a-scene>
+
+  <!-- ===================== UI 2D (HTML/CSS overlay) ===================== -->
+  <div id="hud">
+    <header class="topbar">
+      <button id="navBackButton" class="nav-btn" type="button">← KEMBALI</button>
+      <div class="status">
+        <h1>SIMULASI PERSIMPANGAN</h1>
+        <span class="sep hide-sm"></span>
+        <span id="hudStep" class="hide-sm">Persiapan</span>
+        <span class="sep"></span>
+        <span id="hudLight" class="light-pill green"><i></i><span>HIJAU</span></span>
+        <span class="sep"></span>
+        <span>Skor <b id="hudScore">0</b>/3</span>
+      </div>
+      <button id="navHomeButton" class="nav-btn" type="button">HOME ⌂</button>
+    </header>
+
+    <section id="introUI" class="panel is-visible" aria-live="polite">
+      <div>
+        <div class="eyebrow">Posisi Pengemudi · Lajur Kiri</div>
+        <h2>Siap Mendekati Persimpangan?</h2>
+        <p>Perhatikan lampu lalu lintas, garis henti, zebra cross, dan kendaraan dari arah lain. Pilih tindakan paling
+          aman di setiap skenario.</p>
+      </div>
+      <div class="actions">
+        <button id="btnStart" class="btn primary" type="button">MULAI SIMULASI</button>
+      </div>
+    </section>
+
+    <section id="scenarioUI" class="panel" aria-live="polite">
+      <div>
+        <div id="uiStep" class="eyebrow">Skenario 1 / 3</div>
+        <h2 id="uiTitle">LAMPU MERAH</h2>
+        <p id="uiBody">Lampu lalu lintas menyala merah. Apa tindakan Anda?</p>
+      </div>
+      <div class="actions">
+        <button id="btnOpt1" class="btn" type="button"><span class="key">A</span><span class="btn-text">OPSI
+            1</span></button>
+        <button id="btnOpt2" class="btn" type="button"><span class="key">B</span><span class="btn-text">OPSI
+            2</span></button>
+        <button id="btnNext" class="btn secondary" type="button" hidden>LANJUTKAN →</button>
+      </div>
+    </section>
+
+    <section id="summaryUI" class="panel" aria-live="polite">
+      <div>
+        <div class="eyebrow">Ringkasan Hasil</div>
+        <h2 id="sumTitle">SIMULASI SELESAI</h2>
+        <p id="sumBody">Anda telah menyelesaikan simulasi.</p>
+      </div>
+      <div class="actions">
+        <button id="btnRestart" class="btn primary" type="button">ULANGI</button>
+        <button id="btnGoHazard" class="btn secondary" type="button">LANJUT KE BAHAYA →</button>
+      </div>
+    </section>
+
+    <div id="flash"></div>
+  </div>
+
+  <div id="loader">
+    <div style="text-align:center">
+      <div class="spin"></div>
+      <div>Memuat persimpangan 3D…</div>
+    </div>
+  </div>
 
   <script>
     (() => {
-      // Definisi Skenario Pengambilan Keputusan
       const scenarios = [
         {
           lightState: 'red',
-          title: 'SKENARIO 1: LAMPU MERAH',
-          desc: 'Anda sedang mengemudi menuju persimpangan dan lampu lalu lintas menyala MERAH.\n\nApa tindakan yang paling aman?',
+          title: 'LAMPU MERAH',
+          desc: 'Lampu lalu lintas menyala MERAH. Apa tindakan Anda?',
           options: [
-            { text: 'BERHENTI DI GARIS HENTI', correct: true, feedback: 'Benar! Anda wajib berhenti di belakang garis henti untuk menghindari konflik dengan pejalan kaki dan kendaraan lain.' },
-            { text: 'TETAP MELAJU', correct: false, feedback: 'Sangat berbahaya! Menerobos lampu merah dapat menyebabkan kecelakaan fatal. Anda wajib berhenti sepenuhnya.' }
+            { text: 'BERHENTI', correct: true, action: 'stop_safe', feedback: 'Tepat! Anda berhenti dengan aman sebelum garis henti dan zebra cross.' },
+            { text: 'TETAP MELAJU', correct: false, action: 'go_danger', feedback: 'BERBAHAYA! Menerobos lampu merah hampir menabrak kendaraan dari arah kanan.' }
           ]
         },
         {
           lightState: 'yellow',
-          title: 'SKENARIO 2: LAMPU KUNING',
-          desc: 'Saat Anda mendekati persimpangan, lampu hijau tiba-tiba berubah menjadi KUNING.\n\nApa tindakan Anda?',
+          title: 'LAMPU KUNING',
+          desc: 'Lampu berubah menjadi KUNING. Apa tindakan Anda?',
           options: [
-            { text: 'PERCEPAT KENDARAAN', correct: false, feedback: 'Salah! Mempercepat kendaraan saat lampu kuning sangat berisiko. Lampu kuning adalah peringatan untuk berhenti.' },
-            { text: 'KURANGI KECEPATAN', correct: true, feedback: 'Tepat! Lampu kuning berarti Anda harus mengurangi kecepatan dan bersiap untuk berhenti dengan aman.' }
+            { text: 'PERCEPAT KENDARAAN', correct: false, action: 'go_danger', feedback: 'BERBAHAYA! Mempercepat saat kuning berisiko bertabrakan di tengah persimpangan.' },
+            { text: 'KURANGI KECEPATAN', correct: true, action: 'slow_down', feedback: 'Benar! Kurangi kecepatan dan bersiap berhenti di belakang garis henti.' }
           ]
         },
         {
           lightState: 'green',
-          title: 'SKENARIO 3: LAMPU HIJAU',
-          desc: 'Lampu lalu lintas menyala HIJAU, dan giliran Anda untuk melintasi persimpangan.\n\nApa tindakan yang tepat?',
+          title: 'LAMPU HIJAU',
+          desc: 'Lampu lalu lintas HIJAU. Apa tindakan yang tepat?',
           options: [
-            { text: 'CEK KONDISI LALU LINTAS', correct: true, feedback: 'Benar! Meskipun hijau, tetap waspada. Periksa persimpangan dari pejalan kaki atau kendaraan yang mungkin terlambat melintas.' },
-            { text: 'LANGSUNG TANCAP GAS', correct: false, feedback: 'Kurang aman. Selalu pastikan persimpangan benar-benar aman sebelum melaju, meskipun lampu menunjukkan hijau.' }
+            { text: 'CEK JALAN & MELINTAS', correct: true, action: 'go_safe', feedback: 'Tepat! Tetap periksa kiri-kanan meski lampu sudah hijau.' },
+            { text: 'LANGSUNG TANCAP GAS', correct: false, action: 'go_danger_green', feedback: 'KURANG AMAN! Ada kendaraan menerobos dari arah kanan. Selalu waspada.' }
           ]
         }
       ];
 
+      const $ = s => document.querySelector(s);
+      const panels = { intro: $('#introUI'), scenario: $('#scenarioUI'), summary: $('#summaryUI') };
+      const uiStep = $('#uiStep'), uiTitle = $('#uiTitle'), uiBody = $('#uiBody');
+      const sumTitle = $('#sumTitle'), sumBody = $('#sumBody');
+      const btnStart = $('#btnStart'), btnOpt1 = $('#btnOpt1'), btnOpt2 = $('#btnOpt2'), btnNext = $('#btnNext');
+      const btnRestart = $('#btnRestart'), btnGoHazard = $('#btnGoHazard');
+      const hudStep = $('#hudStep'), hudLight = $('#hudLight'), hudScore = $('#hudScore');
+      const flash = $('#flash');
+
+      // Koordinat kunci (meter), selaras dengan window.ROAD
+      const PLAYER_X = -1.65;
+      const PLAYER_START_Z = 30;
+      const STOP_Z = 14.6;          // depan mobil (panjang 4.5) ±0.8 m di belakang garis henti
+      const CONFLICT_Z = 5.6;       // depan mobil masuk lajur silang (titik konflik)
+      const SIDE_START_X = 70, SIDE_STOP_X = 1.95, SIDE_Z = 4.95;
+      const CAM_POS = { x: 0, y: 3.6, z: 9.5 };
+
+      const ease = {
+        out: p => 1 - Math.pow(1 - p, 3),
+        inOut: p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2,
+        rush: p => p * (1.6 - 0.6 * p)
+      };
+      const ACTIONS = {
+        stop_safe: { z: STOP_Z, dur: 2400, ease: ease.out },
+        slow_down: { z: STOP_Z, dur: 3400, ease: ease.out },
+        go_danger: { z: CONFLICT_Z, dur: 2000, ease: ease.rush, nearMiss: true },
+        go_safe: { z: -30, dur: 4600, ease: ease.inOut },
+        go_danger_green: { z: CONFLICT_Z, dur: 1900, ease: ease.rush, nearMiss: true }
+      };
+
       let currentScenarioIndex = 0;
       let correctAnswers = 0;
+      let runId = 0;
 
-      const uiTitle = document.querySelector('#uiTitle');
-      const uiBody = document.querySelector('#uiBody');
-      const btnStart = document.querySelector('#btnStart');
-      const btnOpt1 = document.querySelector('#btnOpt1');
-      const btnOpt2 = document.querySelector('#btnOpt2');
-      const btnNext = document.querySelector('#btnNext');
-      const btnRestart = document.querySelector('#btnRestart');
-      const btnGoHazard = document.querySelector('#btnGoHazard');
+      const rig = () => $('#playerRig').object3D;
+      const sideCarEl = $('#sideCar');
 
-      // Fungsi untuk mengontrol lampu lalu lintas (visual dan emisi)
+      function tween(dur, fn, easing, done, id) {
+        const t0 = performance.now();
+        const step = () => {
+          if (id !== runId) return; // dibatalkan oleh reset
+          const p = Math.min(Math.max((performance.now() - t0) / dur, 0), 1);
+          fn(easing ? easing(p) : p);
+          if (p < 1) requestAnimationFrame(step); else if (done) done();
+        };
+        requestAnimationFrame(step);
+      }
+
+      function shakeCamera(id) {
+        const pivot = $('#camPivot').object3D;
+        tween(450, p => {
+          const a = (1 - p) * 0.12;
+          pivot.position.set(CAM_POS.x + (Math.random() - .5) * a, CAM_POS.y + (Math.random() - .5) * a, CAM_POS.z);
+        }, null, () => pivot.position.set(CAM_POS.x, CAM_POS.y, CAM_POS.z), id);
+      }
+
+      function animateSideCar(dur, id) {
+        sideCarEl.setAttribute('visible', 'true');
+        const o = sideCarEl.object3D;
+        tween(dur, p => { o.position.x = SIDE_START_X + (SIDE_STOP_X - SIDE_START_X) * p; }, ease.out, null, id);
+      }
+
+      function animateCar(action, callback) {
+        const cfg = ACTIONS[action];
+        const id = runId;
+        const car = rig();
+        const startZ = car.position.z;
+        if (cfg.nearMiss) setTimeout(() => { if (id === runId) animateSideCar(cfg.dur - 150, id); }, 150);
+        tween(cfg.dur, p => { car.position.z = startZ + (cfg.z - startZ) * p; }, cfg.ease, () => {
+          if (cfg.nearMiss) {
+            flash.classList.add('on');
+            shakeCamera(id);
+            setTimeout(() => flash.classList.remove('on'), 600);
+            setTimeout(() => { if (id === runId && callback) callback(); }, 650);
+          } else if (callback) callback();
+        }, id);
+      }
+
+      function resetPositions() {
+        runId++;
+        rig().position.set(PLAYER_X, 0, PLAYER_START_Z);
+        sideCarEl.setAttribute('visible', 'false');
+        sideCarEl.object3D.position.set(SIDE_START_X, 0.01, SIDE_Z);
+        $('#camPivot').object3D.position.set(CAM_POS.x, CAM_POS.y, CAM_POS.z);
+        flash.classList.remove('on');
+      }
+
+      const LIGHT_COLORS = {
+        Red: { on: '#ff2b2b', off: '#3a1010' },
+        Yellow: { on: '#ffc61a', off: '#3a3010' },
+        Green: { on: '#22ee66', off: '#0f3a1c' }
+      };
+      function paintGroup(prefix, state) {
+        Object.keys(LIGHT_COLORS).forEach(c => {
+          const on = state === c.toLowerCase();
+          document.querySelectorAll(`.${prefix}${c}`).forEach(el => {
+            el.setAttribute('material', on
+              ? { shader: 'flat', color: LIGHT_COLORS[c].on }
+              : { shader: 'standard', color: LIGHT_COLORS[c].off, roughness: 0.5 });
+          });
+        });
+      }
       function setTrafficLight(state) {
-        document.querySelector('#tlRed').setAttribute('color', state === 'red' ? '#FF0000' : '#550000');
-        document.querySelector('#tlYellow').setAttribute('color', state === 'yellow' ? '#FFC300' : '#555500');
-        document.querySelector('#tlGreen').setAttribute('color', state === 'green' ? '#00FF00' : '#005500');
-
-        document.querySelector('#tlRed').setAttribute('material', state === 'red' ? 'shader: flat' : '');
-        document.querySelector('#tlYellow').setAttribute('material', state === 'yellow' ? 'shader: flat' : '');
-        document.querySelector('#tlGreen').setAttribute('material', state === 'green' ? 'shader: flat' : '');
+        paintGroup('tl', state);
+        paintGroup('x', state === 'red' ? 'green' : 'red'); // arah silang berlawanan fase
+        const label = { red: 'MERAH', yellow: 'KUNING', green: 'HIJAU' }[state];
+        hudLight.className = `light-pill ${state}`;
+        hudLight.querySelector('span').textContent = label;
       }
 
-      // Fungsi bantu visibilitas UI
-      function showEl(el) {
-        el.setAttribute('visible', 'true');
-        el.setAttribute('scale', '1 1 1');
-        el.classList.add('clickable');
+      function showPanel(name) {
+        Object.entries(panels).forEach(([k, el]) => el.classList.toggle('is-visible', k === name));
       }
-
-      function hideEl(el) {
-        el.setAttribute('visible', 'false');
-        el.setAttribute('scale', '0 0 0');
-        el.classList.remove('clickable');
+      function setFeedbackState(state) {
+        panels.scenario.classList.remove('is-correct', 'is-wrong');
+        if (state) panels.scenario.classList.add(state);
       }
+      const showBtn = (b) => { b.hidden = false; b.disabled = false; };
+      const hideBtn = (b) => { b.hidden = true; };
+      const updateScore = () => { hudScore.textContent = correctAnswers; };
 
-      // Memuat skenario sesuai index
       function loadScenario() {
-        if (currentScenarioIndex >= scenarios.length) {
-          showSummary();
-          return;
-        }
-
+        if (currentScenarioIndex >= scenarios.length) { showSummary(); return; }
         const s = scenarios[currentScenarioIndex];
         setTrafficLight(s.lightState);
-
-        uiTitle.setAttribute('value', s.title);
-        uiTitle.setAttribute('color', '#16324F');
-        uiBody.setAttribute('value', s.desc);
-
-        btnOpt1.querySelector('.btn-text').setAttribute('value', s.options[0].text);
-        btnOpt2.querySelector('.btn-text').setAttribute('value', s.options[1].text);
-
-        btnOpt1.dataset.correct = s.options[0].correct;
-        btnOpt1.dataset.feedback = s.options[0].feedback;
-        btnOpt2.dataset.correct = s.options[1].correct;
-        btnOpt2.dataset.feedback = s.options[1].feedback;
-
-        showEl(btnOpt1);
-        showEl(btnOpt2);
-
-        hideEl(btnStart);
-        hideEl(btnNext);
-        hideEl(btnRestart);
-        hideEl(btnGoHazard);
+        setFeedbackState(null);
+        uiStep.textContent = `Skenario ${currentScenarioIndex + 1} / ${scenarios.length}`;
+        hudStep.textContent = uiStep.textContent;
+        uiTitle.textContent = s.title;
+        uiBody.textContent = s.desc;
+        [btnOpt1, btnOpt2].forEach((b, i) => {
+          const o = s.options[i];
+          b.querySelector('.btn-text').textContent = o.text;
+          b.dataset.correct = o.correct;
+          b.dataset.action = o.action;
+          b.dataset.feedback = o.feedback;
+          showBtn(b);
+        });
+        hideBtn(btnNext);
       }
 
-      // Memproses hasil pilihan pengguna
       function handleOptionClick(el) {
+        if (el.disabled) return;
         const isCorrect = el.dataset.correct === 'true';
-        const feedbackMsg = el.dataset.feedback;
-
         if (isCorrect) correctAnswers++;
+        updateScore();
+        btnOpt1.disabled = btnOpt2.disabled = true;
+        hideBtn(btnOpt1 === el ? btnOpt2 : btnOpt1);
 
-        hideEl(btnOpt1);
-        hideEl(btnOpt2);
+        setFeedbackState(isCorrect ? 'is-correct' : 'is-wrong');
+        uiTitle.textContent = isCorrect ? 'KEPUTUSAN TEPAT' : 'KEPUTUSAN BERBAHAYA';
+        uiBody.textContent = 'Mensimulasikan tindakan…';
 
-        uiTitle.setAttribute('value', isCorrect ? 'TEPAT!' : 'KURANG TEPAT');
-        uiTitle.setAttribute('color', isCorrect ? '#168447' : '#C62828');
-        uiBody.setAttribute('value', feedbackMsg);
-
-        showEl(btnNext);
+        animateCar(el.dataset.action, () => {
+          if (!isCorrect) uiTitle.textContent = 'HAMPIR TABRAKAN!';
+          uiBody.textContent = el.dataset.feedback;
+          hideBtn(el);
+          btnNext.textContent = currentScenarioIndex + 1 < scenarios.length ? 'LANJUTKAN →' : 'LIHAT HASIL →';
+          showBtn(btnNext);
+        });
       }
 
-      // Menampilkan ringkasan akhir
       function showSummary() {
-        setTrafficLight('yellow'); // Lampu kuning berkedip atau stanby sebagai penanda selesai
-        uiTitle.setAttribute('value', 'SIMULASI SELESAI');
-        uiTitle.setAttribute('color', '#16324F');
-        uiBody.setAttribute('value', `Anda menyelesaikan ${scenarios.length} skenario dengan ${correctAnswers} keputusan yang tepat.\n\nIngatlah selalu untuk memprioritaskan keselamatan dan memperhatikan rambu serta marka jalan demi keamanan bersama.`);
-
-        hideEl(btnOpt1);
-        hideEl(btnOpt2);
-        hideEl(btnNext);
-        hideEl(btnStart);
-
-        showEl(btnRestart);
-        showEl(btnGoHazard);
+        setTrafficLight('yellow');
+        hudStep.textContent = 'Selesai';
+        const n = scenarios.length;
+        sumTitle.textContent = correctAnswers === n ? 'LUAR BIASA — SEMUA AMAN!' : 'SIMULASI SELESAI';
+        sumBody.textContent = `Anda membuat ${correctAnswers} dari ${n} keputusan aman. Disiplin di persimpangan mengurangi risiko kecelakaan secara signifikan.`;
+        showPanel('summary');
       }
 
-      // --- Event Listeners ---
-
-      btnStart.addEventListener('click', () => {
+      function startRun() {
         currentScenarioIndex = 0;
         correctAnswers = 0;
+        updateScore();
+        resetPositions();
+        showPanel('scenario');
         loadScenario();
-      });
+      }
 
-      btnOpt1.addEventListener('click', function () { handleOptionClick(this); });
-      btnOpt2.addEventListener('click', function () { handleOptionClick(this); });
-
+      btnStart.addEventListener('click', startRun);
+      btnRestart.addEventListener('click', startRun);
+      btnOpt1.addEventListener('click', () => handleOptionClick(btnOpt1));
+      btnOpt2.addEventListener('click', () => handleOptionClick(btnOpt2));
       btnNext.addEventListener('click', () => {
+        resetPositions();
         currentScenarioIndex++;
         loadScenario();
       });
+      $('#navBackButton').addEventListener('click', () => { window.location.href = 'rambu.html'; });
+      $('#navHomeButton').addEventListener('click', () => { window.location.href = 'index.html'; });
+      btnGoHazard.addEventListener('click', () => { window.location.href = 'hazard.html'; });
 
-      btnRestart.addEventListener('click', () => {
-        currentScenarioIndex = 0;
-        correctAnswers = 0;
-        loadScenario();
-      });
-
-      // Navigasi Utama
-      document.querySelector('#navBackButton').addEventListener('click', () => {
-        window.location.href = 'rambu.html';
-      });
-
-      document.querySelector('#navHomeButton').addEventListener('click', () => {
-        window.location.href = 'index.html';
-      });
-
-      document.querySelector('#btnGoHazard').addEventListener('click', () => {
-        window.location.href = 'hazard.html';
-      });
-
-      // Efek Hover yang aman dari interupsi kelas tersembunyi
-      document.querySelectorAll('.clickable, #btnOpt1, #btnOpt2, #btnNext, #btnRestart, #btnGoHazard').forEach(el => {
-        el.addEventListener('mouseenter', () => {
-          if (el.classList.contains('clickable')) {
-            el.setAttribute('scale', '1.05 1.05 1.05');
-          }
-        });
-        el.addEventListener('mouseleave', () => {
-          if (el.classList.contains('clickable')) {
-            el.setAttribute('scale', '1 1 1');
-          }
-        });
-      });
-
-      // State awal (hijau sebagai warna netral sebelum mulai)
-      setTrafficLight('green');
+      const scene = $('#scene');
+      const ready = () => {
+        setTrafficLight('green');
+        const loader = $('#loader');
+        setTimeout(() => loader.classList.add('done'), 300);
+        setTimeout(() => { loader.style.display = 'none'; }, 900);
+      };
+      if (scene.hasLoaded) ready(); else scene.addEventListener('loaded', ready);
     })();
   </script>
 </body>

@@ -1,43 +1,97 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>SIMReady VR</title>
+<!DOCTYPE html>
+<html lang="id">
 
-    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <title>SIMReady VR - Home</title>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+</head>
 
-  <body>
-    <a-scene>
-      <!-- Environment -->
-      <a-sky color="#87CEEB"></a-sky>
+<body>
+  <a-scene background="color: #74B9FF">
 
-      <!-- Ground -->
-      <a-plane position="0 0 -4" rotation="-90 0 0" width="30" height="30" color="#D9D9D9"> </a-plane>
+    <!-- ============================================== -->
+    <!-- LINGKUNGAN (ENVIRONMENT)                       -->
+    <!-- ============================================== -->
+
+    <!-- Lantai Rumput -->
+    <a-plane position="0 0 -10" rotation="-90 0 0" width="50" height="50" color="#55E6C1"></a-plane>
+
+    <!-- Jalan Aspal -->
+    <a-plane position="0 0.01 -10" rotation="-90 0 0" width="10" height="50" color="#2D3436"></a-plane>
+
+    <!-- Marka Jalan (Garis Putus-putus) -->
+    <a-entity position="0 0.02 0">
+      <a-box position="0 0 -2" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
+      <a-box position="0 0 -5" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
+      <a-box position="0 0 -8" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
+      <a-box position="0 0 -11" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
+    </a-entity>
+
+    <!-- Hiasan: Kerucut Lalu Lintas di Pinggir Jalan -->
+    <a-entity position="-3.5 0 -4">
+      <a-cone position="0 0.6 0" radius-bottom="0.4" radius-top="0.1" height="1.2" color="#FF7675"></a-cone>
+      <a-box position="0 0.05 0" width="1" height="0.1" depth="1" color="#2D3436"></a-box>
+    </a-entity>
+
+    <a-entity position="3.5 0 -6">
+      <a-cone position="0 0.6 0" radius-bottom="0.4" radius-top="0.1" height="1.2" color="#FF7675"></a-cone>
+      <a-box position="0 0.05 0" width="1" height="0.1" depth="1" color="#2D3436"></a-box>
+    </a-entity>
+
+
+    <!-- ============================================== -->
+    <!-- MAIN MENU PANEL (Mengambang Naik-Turun)        -->
+    <!-- ============================================== -->
+    <a-entity position="0 2.2 -4.5"
+      animation="property: position; to: 0 2.35 -4.5; dir: alternate; dur: 2500; loop: true; easing: easeInOutSine">
+
+      <!-- Latar Belakang Panel Putih -->
+      <a-plane width="6.5" height="3.5" color="#FFFFFF" material="opacity: 0.95; transparent: true"></a-plane>
+      <!-- Border Biru di belakang panel -->
+      <a-box position="0 0 -0.05" width="6.7" height="3.7" depth="0.05" color="#0984E3"></a-box>
 
       <!-- Judul -->
-      <a-text value="SIMREADY VR" position="0 3 -5" align="center" width="8" color="#111111"> </a-text>
-
-      <a-text value="Virtual Road Safety Learning" position="0 2.4 -5" align="center" width="5" color="#333333"> </a-text>
-
-      <!-- Tombol Mulai -->
-      <a-box id="startButton" class="clickable" position="0 1.3 -4" width="3" height="0.8" depth="0.15" color="#444444"> </a-box>
-
-      <a-text value="MULAI" position="0 1.3 -3.9" align="center" width="4" color="#FFFFFF"> </a-text>
+      <a-text value="SIMREADY VR" position="0 1.1 0.1" align="center" width="9" color="#2D3436"
+        font="mozillavr"></a-text>
+      <a-text value="Virtual Road Safety Learning" position="0 0.5 0.1" align="center" width="5.5"
+        color="#636E72"></a-text>
 
       <!-- Keterangan -->
-      <a-text value="Pelajari rambu, situasi jalan,\nhazard, dan uji pemahamanmu." position="0 0.4 -4" align="center" width="4" color="#222222"> </a-text>
+      <a-text value="Pelajari rambu lalu lintas, kenali potensi bahaya,\ndan uji pemahamanmu secara interaktif."
+        position="0 -0.1 0.1" align="center" width="4.5" color="#2D3436"></a-text>
 
-      <!-- Camera + Cursor -->
-      <a-camera position="0 1.6 0">
-        <a-cursor color="#000000" raycaster="objects: .clickable"> </a-cursor>
-      </a-camera>
-    </a-scene>
+      <!-- Tombol Mulai (Interaktif) -->
+      <a-entity id="startButton" class="clickable" position="0 -1.1 0.15"
+        animation__hover="property: scale; to: 1.08 1.08 1.08; startEvents: mouseenter; dur: 200"
+        animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave; dur: 200">
+        <a-box width="3.2" height="0.7" depth="0.1" color="#00B894"></a-box>
+        <a-text value="MULAI SEKARANG" position="0 0 0.06" align="center" width="4.5" color="#FFFFFF"
+          font="mozillavr"></a-text>
+      </a-entity>
 
-    <script>
-      document.querySelector("#startButton").addEventListener("click", function () {
-        window.location.href = "rambu.html";
-      });
-    </script>
-  </body>
+    </a-entity>
+
+    <!-- ============================================== -->
+    <!-- KAMERA & KURSOR                                -->
+    <!-- ============================================== -->
+    <a-camera position="0 1.6 0">
+      <!-- Kursor Mouse untuk Desktop -->
+      <a-entity cursor="fuse: false; rayOrigin: mouse;" raycaster="objects: .clickable"></a-entity>
+      <!-- Kursor Titik untuk Mode VR Headset -->
+      <a-cursor color="#2D3436" raycaster="objects: .clickable"
+        animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150">
+      </a-cursor>
+    </a-camera>
+
+  </a-scene>
+
+  <script>
+    // Pindah ke halaman rambu saat diklik
+    document.querySelector("#startButton").addEventListener("click", function () {
+      window.location.href = "rambu.html";
+    });
+  </script>
+</body>
+
 </html>

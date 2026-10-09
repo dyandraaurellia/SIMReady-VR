@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html><head><style>html,body{margin:0;overflow:hidden}iframe{border:0;width:1600px;height:900px}</style></head>
+<body>
+<iframe id="f" src="situasi.html"></iframe>
+<script>
+  // Harness uji sementara: ?seq=start,1,next,2  (angka = pilih opsi 1/2, next = lanjutkan)
+  const seq = (new URLSearchParams(location.search).get('seq') || '').split(',').filter(Boolean);
+  const f = document.getElementById('f');
+  f.addEventListener('load', () => {
+    const d = () => f.contentDocument;
+    const w = f.contentWindow;
+    w.requestAnimationFrame = cb => w.setTimeout(() => cb(w.performance.now()), 16);
+    const ids = { start: '#btnStart', '1': '#btnOpt1', '2': '#btnOpt2', next: '#btnNext', restart: '#btnRestart' };
+    let i = 0;
+    const run = () => {
+      if (i >= seq.length) return;
+      const b = d().querySelector(ids[seq[i]]);
+      if (b && !b.hidden && !b.disabled) { b.click(); i++; setTimeout(run, 400); }
+      else setTimeout(run, 300);
+    };
+    setTimeout(run, 2500);
+  });
+</script>
+</body></html>
