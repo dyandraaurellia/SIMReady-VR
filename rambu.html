@@ -1,157 +1,835 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>SIMReady VR - Traffic Sign Explorer</title>
+<!DOCTYPE html>
+<html lang="id">
 
-    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMReady VR - Belajar Rambu Lalu Lintas</title>
+  <meta name="description" content="Pelajari arti dan fungsi rambu lalu lintas dalam lingkungan 3D interaktif.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 
-  <body>
-    <a-scene>
-      <!-- Mouse bisa langsung klik objek -->
-      <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"> </a-entity>
+  <style>
+    :root {
+      --glass: rgba(12, 18, 30, 0.74);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --text: #f4f7fb;
+      --muted: #b7c2d3;
+      --accent: #33d6ff;
+      --ok: #2ee59d;
+      --bad: #ff4d6a;
+      --warn: #ffc93c;
+      --btn: rgba(255, 255, 255, 0.08);
+      --btn-hover: rgba(255, 255, 255, 0.18);
+    }
 
-      <!-- SKY -->
-      <a-sky color="#87CEEB"></a-sky>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #a9d3ef;
+      font-family: 'Outfit', system-ui, sans-serif;
+      color: var(--text);
+    }
 
-      <!-- TANAH -->
-      <a-plane position="0 0 -8" rotation="-90 0 0" width="30" height="30" color="#8DBA73"> </a-plane>
+    /* ---------- Lapisan UI 2D ---------- */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
 
-      <!-- JALAN -->
-      <a-plane position="0 0.02 -8" rotation="-90 0 0" width="10" height="25" color="#444444"> </a-plane>
+    #hud button,
+    #hud .panel,
+    #hud .topbar>* {
+      pointer-events: auto;
+    }
 
-      <!-- MARKA -->
-      <a-box position="0 0.04 -5" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-      <a-box position="0 0.04 -9" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+    .nav-btn {
+      font: 600 14px/1 'Outfit', sans-serif;
+      letter-spacing: .06em;
+      color: var(--text);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      padding: 10px 18px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
 
-      <a-box position="0 0.04 -13" width="0.15" height="0.03" depth="2" color="white"> </a-box>
+    .nav-btn:hover {
+      background: rgba(30, 42, 64, .9);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
 
-      <!-- JUDUL -->
-      <a-text value="TRAFFIC SIGN EXPLORER" position="0 4 -6" align="center" width="8" color="#111111"> </a-text>
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 24px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
 
-      <a-text value="Klik rambu untuk melihat informasi" position="0 3.45 -6" align="center" width="5" color="#333333"> </a-text>
+    .status h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      color: var(--accent);
+    }
 
-      <!-- ======================= -->
-      <!-- RAMBU STOP -->
-      <!-- ======================= -->
+    .instruction {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      padding: 10px 24px;
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: opacity 0.3s ease;
+      text-align: center;
+    }
 
-      <a-entity position="-3 1.7 -7">
-        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
+    /* ---------- Panel Informasi ---------- */
+    .panel {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 400px;
+      max-height: calc(100vh - 48px);
+      left: auto;
+      bottom: auto;
+      box-sizing: border-box;
+      display: none;
+      grid-template-columns: 1fr;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 30px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-left: 5px solid var(--accent);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, .3);
+    }
 
-        <a-circle id="signStop" class="clickable sign" position="0 0.7 0" radius="0.8" color="#C62828"> </a-circle>
+    .panel.is-visible {
+      display: grid;
+      animation: slideIn .4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-        <a-text value="STOP" position="0 0.7 0.03" align="center" width="3" color="white"> </a-text>
-      </a-entity>
-
-      <!-- ======================= -->
-      <!-- DILARANG MASUK -->
-      <!-- ======================= -->
-
-      <a-entity position="0 1.7 -7">
-        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
-
-        <a-circle id="signNoEntry" class="clickable sign" position="0 0.7 0" radius="0.8" color="#D32F2F"> </a-circle>
-
-        <a-box position="0 0.7 0.03" width="1" height="0.22" depth="0.03" color="white"> </a-box>
-      </a-entity>
-
-      <!-- ======================= -->
-      <!-- PEJALAN KAKI -->
-      <!-- ======================= -->
-
-      <a-entity position="3 1.7 -7">
-        <a-cylinder position="0 -0.8 0" radius="0.08" height="2.5" color="#777777"> </a-cylinder>
-
-        <a-circle id="signPedestrian" class="clickable sign" position="0 0.7 0" radius="0.8" color="#1565C0"> </a-circle>
-
-        <a-text value="PEJALAN\nKAKI" position="0 0.82 0.03" align="center" width="2.2" color="white"> </a-text>
-      </a-entity>
-
-      <!-- ======================= -->
-      <!-- PANEL INFORMASI -->
-      <!-- ======================= -->
-
-      <a-entity id="infoPanel" position="0 2 -3.5" visible="false">
-        <a-plane width="5.5" height="3" color="#FFFFFF"> </a-plane>
-
-        <a-text id="infoTitle" value="INFORMASI" position="0 0.8 0.05" align="center" width="5" color="#111111"> </a-text>
-
-        <a-text id="infoText" value="" position="0 0 0.05" align="center" width="4.5" color="#333333"> </a-text>
-
-        <!-- BUTTON TUTUP -->
-        <a-box id="closePanel" class="clickable" position="0 -1 0.1" width="1.8" height="0.5" depth="0.1" color="#C62828"> </a-box>
-
-        <a-text value="TUTUP" position="0 -1 0.17" align="center" width="2.5" color="white"> </a-text>
-      </a-entity>
-
-      <!-- HOME -->
-      <a-box id="homeButton" class="clickable" position="-2 0.6 -4" width="2" height="0.55" depth="0.15" color="#555555"> </a-box>
-
-      <a-text value="HOME" position="-2 0.6 -3.9" align="center" width="2.5" color="white"> </a-text>
-
-      <!-- NEXT -->
-      <a-box id="nextButton" class="clickable" position="2 0.6 -4" width="2" height="0.55" depth="0.15" color="#333333"> </a-box>
-
-      <a-text value="NEXT" position="2 0.6 -3.9" align="center" width="2.5" color="white"> </a-text>
-
-      <!-- CAMERA -->
-      <a-camera position="0 1.6 1"></a-camera>
-    </a-scene>
-
-    <script>
-      const panel = document.querySelector("#infoPanel");
-      const infoTitle = document.querySelector("#infoTitle");
-      const infoText = document.querySelector("#infoText");
-
-      function showInfo(title, description) {
-        infoTitle.setAttribute("value", title);
-        infoText.setAttribute("value", description);
-
-        panel.setAttribute("visible", true);
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translate(20px, -50%);
       }
 
-      // STOP
-      document.querySelector("#signStop").addEventListener("click", function () {
-        showInfo("RAMBU STOP", "Pengguna jalan harus berhenti\nsebelum melanjutkan perjalanan.");
-      });
+      to {
+        opacity: 1;
+        transform: translate(0, -50%);
+      }
+    }
 
-      // DILARANG MASUK
-      document.querySelector("#signNoEntry").addEventListener("click", function () {
-        showInfo("DILARANG MASUK", "Menunjukkan bahwa kendaraan\ntidak diperbolehkan memasuki\narea tersebut.");
-      });
+    .panel .eyebrow {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      color: var(--warn);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
 
-      // PEJALAN KAKI
-      document.querySelector("#signPedestrian").addEventListener("click", function () {
-        showInfo("AREA PEJALAN KAKI", "Perhatikan keberadaan\npejalan kaki di sekitar jalan.");
-      });
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      color: var(--accent);
+    }
 
-      // TUTUP
-      document.querySelector("#closePanel").addEventListener("click", function () {
-        panel.setAttribute("visible", false);
-      });
+    .panel p {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text);
+    }
 
-      // HOME
-      document.querySelector("#homeButton").addEventListener("click", function () {
-        window.location.href = "index.html";
-      });
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
 
-      // NEXT
-      document.querySelector("#nextButton").addEventListener("click", function () {
-        window.location.href = "situasi.html";
-      });
+    .btn {
+      font: 700 14px/1.15 'Outfit', sans-serif;
+      letter-spacing: .04em;
+      color: var(--text);
+      background: var(--btn);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+      flex: 1;
+    }
 
-      // HOVER RAMBU
-      document.querySelectorAll(".sign").forEach(function (sign) {
-        sign.addEventListener("mouseenter", function () {
-          sign.setAttribute("scale", "1.15 1.15 1.15");
+    .btn.primary {
+      background: linear-gradient(135deg, #12b886, #0ca678);
+      border-color: transparent;
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, #228be6, #1c7ed6);
+      border-color: transparent;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #0d1626, #16304d);
+      transition: opacity .5s ease;
+    }
+
+    #loader.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loader .spin {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 14px;
+      border: 4px solid rgba(255, 255, 255, .15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .panel {
+        right: 16px;
+        left: 16px;
+        bottom: 16px;
+        top: auto;
+        transform: none;
+        width: auto;
+        padding: 20px;
+      }
+
+      .panel.is-visible {
+        animation: rise .4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .status .hide-sm {
+        display: none;
+      }
+    }
+  </style>
+
+  <script>
+    /* ============================================================
+       DIMENSI DUNIA
+       ============================================================ */
+    window.ROAD = { H: 6.6, L: 3.3, SW: 4.5, R: 160, STOP: 11.6 };
+
+    AFRAME.registerComponent('intersection-builder', {
+      init: function () {
+        const T = THREE;
+        const { H, L, SW, R, STOP } = window.ROAD;
+        const g = new T.Group();
+
+        const canvasTex = (w, h, draw) => {
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          draw(c.getContext('2d'), w, h);
+          const t = new T.CanvasTexture(c);
+          t.colorSpace = T.SRGBColorSpace;
+          t.wrapS = t.wrapT = T.RepeatWrapping;
+          t.anisotropy = 8;
+          return t;
+        };
+        const withRepeat = (tex, rx, ry) => { const t = tex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; };
+
+        const asphaltTex = canvasTex(256, 256, (x, w, h) => {
+          x.fillStyle = '#44474d'; x.fillRect(0, 0, w, h);
+          for (let i = 0; i < 2600; i++) {
+            const v = 50 + Math.random() * 40;
+            x.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + Math.random() * 0.4})`;
+            x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+          }
+        });
+        const paveTex = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = '#cfccc4'; x.fillRect(0, 0, w, h);
+          x.strokeStyle = '#b3b0a8'; x.lineWidth = 2;
+          for (let i = 0; i <= w; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+        });
+        const facadeCache = {};
+        const facadeTex = (wall) => facadeCache[wall] || (facadeCache[wall] = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = wall; x.fillRect(0, 0, w, h);
+          x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(0, 118, w, 10);
+          x.fillStyle = '#eef0f2'; x.fillRect(24, 20, 80, 82);
+          const gr = x.createLinearGradient(0, 24, 0, 98);
+          gr.addColorStop(0, '#9cc3dd'); gr.addColorStop(1, '#4b6b84');
+          x.fillStyle = gr; x.fillRect(28, 24, 72, 74);
+          x.fillStyle = '#eef0f2'; x.fillRect(62, 24, 4, 74);
+          x.fillStyle = 'rgba(255,255,255,0.28)'; x.fillRect(28, 24, 72, 9);
+        }));
+
+        const std = (opts) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.92, metalness: 0 }, opts));
+        const plane = (w, d, mat, x, y, z) => {
+          const geo = new T.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
+          const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m;
+        };
+        const box = (w, h, d, mat, x, y, z, cast) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z); m.receiveShadow = true; m.castShadow = !!cast; g.add(m); return m;
+        };
+
+        // Tanah & Aspal
+        plane(700, 700, std({ color: '#6f9e52' }), 0, -0.05, 0);
+        plane(2 * H, 2 * R, std({ map: withRepeat(asphaltTex, 2 * H / 6, 2 * R / 6) }), 0, 0.01, 0);
+        const ewLen = R - H;
+        const ewMat = std({ map: withRepeat(asphaltTex, ewLen / 6, 2 * H / 6) });
+        plane(ewLen, 2 * H, ewMat, (R + H) / 2, 0.01, 0);
+        plane(ewLen, 2 * H, ewMat, -(R + H) / 2, 0.01, 0);
+
+        // Trotoar, kerb, taman
+        const c = (R + H) / 2;
+        const paveMat = std({ map: withRepeat(paveTex, ewLen / 2, ewLen / 2) });
+        const curbMat = std({ color: '#e4e2dc' });
+        const lawnMat = std({ color: '#79aa5a' });
+        const inner = H + SW, lawnLen = R - inner, lc = (R + inner) / 2;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          box(ewLen, 0.15, ewLen, paveMat, sx * c, 0.075, sz * c);
+          box(0.3, 0.18, ewLen, curbMat, sx * (H + 0.15), 0.09, sz * c);
+          box(ewLen - 0.3, 0.18, 0.3, curbMat, sx * (c + 0.15), 0.09, sz * (H + 0.15));
+          box(lawnLen, 0.2, lawnLen, lawnMat, sx * lc, 0.1, sz * lc);
         });
 
-        sign.addEventListener("mouseleave", function () {
-          sign.setAttribute("scale", "1 1 1");
+        // Marka jalan
+        const rects = [];
+        const approach = (k) => {
+          const out = [];
+          const p = (x, z, w, d) => out.push({ x, z, w, d });
+          for (let x = -H + 0.75; x <= H - 0.74; x += 1.0) p(x, H + 2.5, 0.5, 3.0); // Zebra
+          const x1 = -H + 0.3, x2 = -0.3;
+          p((x1 + x2) / 2, STOP - 0.2 + 0.0, x2 - x1, 0.45); // Stop line
+          const z0 = H + 4.5, zMid = H + 40;
+          p(-0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+          p(0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+          for (let z = zMid + 4; z < R - 4; z += 8) p(0, z + 1.5, 0.15, 3);
+          [-L, L].forEach(lx => {
+            p(lx, (z0 + H + 20) / 2, 0.12, H + 20 - z0);
+            for (let z = H + 24; z < R - 4; z += 9) p(lx, z + 1.5, 0.12, 3);
+          });
+          [-(H - 0.3), H - 0.3].forEach(ex => p(ex, (z0 + R) / 2, 0.15, R - z0));
+          const th = k * Math.PI / 2, cs = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th));
+          out.forEach(r => rects.push({ x: r.x * cs + r.z * sn, z: -r.x * sn + r.z * cs, w: k % 2 ? r.d : r.w, d: k % 2 ? r.w : r.d }));
+        };
+        [0, 1, 2, 3].forEach(approach);
+        const mGeo = new T.PlaneGeometry(1, 1); mGeo.rotateX(-Math.PI / 2);
+        const mMat = std({ color: '#f3f3ee', roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const marks = new T.InstancedMesh(mGeo, mMat, rects.length);
+        const mx = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), scl = new T.Vector3();
+        rects.forEach((r, i) => { pos.set(r.x, 0.025, r.z); scl.set(r.w, 1, r.d); mx.compose(pos, q, scl); marks.setMatrixAt(i, mx); });
+        marks.receiveShadow = true;
+        g.add(marks);
+
+        // Pohon & Gedung
+        const trees = [];
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          for (let d = 22; d < 120; d += 11) {
+            if (!(sz > 0 && d < 50)) trees.push([sx * (H + 3.3), sz * d]);
+            trees.push([sx * d, sz * (H + 3.3)]);
+          }
         });
+        const trunk = new T.InstancedMesh(new T.CylinderGeometry(0.14, 0.2, 2.4, 6), std({ color: '#6b4a32' }), trees.length);
+        const crown = new T.InstancedMesh(new T.IcosahedronGeometry(1.6, 0), std({ color: '#ffffff', flatShading: true }), trees.length);
+        const greens = ['#4f8f3a', '#5d9c43', '#447f35', '#6aa64b'].map(h => new T.Color(h));
+        trees.forEach(([tx, tz], i) => {
+          const s = 0.85 + ((i * 37) % 10) / 25;
+          pos.set(tx, 1.35, tz); scl.set(1, 1, 1); mx.compose(pos, q, scl); trunk.setMatrixAt(i, mx);
+          pos.set(tx, 2.6 + 1.5 * s, tz); scl.set(s, s * 1.1, s); mx.compose(pos, q, scl); crown.setMatrixAt(i, mx);
+          crown.setColorAt(i, greens[i % greens.length]);
+        });
+        trunk.castShadow = crown.castShadow = true;
+        g.add(trunk, crown);
+
+        const walls = ['#f2a65a', '#5fc4b8', '#f6d55c', '#ed6a5a', '#9bc1bc', '#e8d5b7', '#8fb8de', '#c3a6d8'];
+        const roofMat = std({ color: '#7d8590' });
+        let seed = 7;
+        const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+        const building = (cx, cz, w, d, h) => {
+          const wall = walls[Math.floor(rnd() * walls.length)];
+          const ft = facadeTex(wall);
+          const mFront = std({ map: withRepeat(ft, Math.max(1, Math.round(w / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const mSide = std({ map: withRepeat(ft, Math.max(1, Math.round(d / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const b = box(w, h, d, [mSide, mSide, roofMat, roofMat, mFront, mFront], cx, h / 2, cz, true);
+          box(w + 0.4, 0.4, d + 0.4, std({ color: '#d9d6cf' }), cx, h + 0.2, cz, false);
+          return b;
+        };
+        const set = 14.5;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          building(sx * (set + 6), sz * (set + 6), 12, 12, 9 + rnd() * 10);
+          for (let p = set + 14; p < 120;) {
+            const w = 10 + rnd() * 5, d = 10 + rnd() * 4;
+            building(sx * (set + d / 2), sz * (p + w / 2), d, w, 7 + rnd() * 15);
+            const w2 = 10 + rnd() * 5, d2 = 10 + rnd() * 4;
+            building(sx * (p + w2 / 2), sz * (set + d2 / 2), w2, d2, 7 + rnd() * 15);
+            p += Math.max(w, w2) + 2.5;
+          }
+        });
+
+        this.el.setObject3D('city', g);
+      }
+    });
+
+    // Interaksi Rambu
+    AFRAME.registerComponent('sign-interactive', {
+      schema: {
+        title: { type: 'string' },
+        desc: { type: 'string' },
+        category: { type: 'string', default: 'PERINGATAN' }
+      },
+      init: function () {
+        const el = this.el;
+        el.addEventListener('mouseenter', () => {
+          el.setAttribute('animation__scale', 'property: scale; to: 1.1 1.1 1.1; dur: 250; easing: easeOutBack');
+          document.body.style.cursor = 'pointer';
+        });
+        el.addEventListener('mouseleave', () => {
+          el.setAttribute('animation__scale', 'property: scale; to: 1 1 1; dur: 250; easing: easeOutQuad');
+          document.body.style.cursor = 'default';
+        });
+        el.addEventListener('click', () => {
+          // Reset highlights
+          document.querySelectorAll('.highlight-ring').forEach(ring => ring.setAttribute('visible', 'false'));
+
+          // Show highlight
+          const highlight = el.querySelector('.highlight-ring');
+          if (highlight) highlight.setAttribute('visible', 'true');
+
+          if (window.focusOnSign) window.focusOnSign(el);
+          if (window.showSignInfo) window.showSignInfo(this.data.title, this.data.desc, this.data.category);
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <!-- ===================== CANVAS ICON GENERATOR ===================== -->
+  <script>
+    function createIconTexture(id, drawCallback) {
+      const canvas = document.createElement('canvas');
+      canvas.id = id;
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      ctx.translate(256, 256);
+      ctx.fillStyle = '#111';
+      ctx.strokeStyle = '#111';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      drawCallback(ctx);
+
+      document.body.appendChild(canvas);
+      canvas.style.display = 'none';
+    }
+
+    createIconTexture('icon-plus', ctx => {
+      ctx.fillRect(-45, -180, 90, 360);
+      ctx.fillRect(-180, -45, 360, 90);
+    });
+
+    createIconTexture('icon-left', ctx => {
+      ctx.lineWidth = 80;
+      ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(0, 50);
+      ctx.quadraticCurveTo(0, -50, -100, -50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-80, -120); ctx.lineTo(-180, -50); ctx.lineTo(-80, 20); ctx.fill();
+    });
+
+    createIconTexture('icon-right', ctx => {
+      ctx.lineWidth = 80;
+      ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(0, 50);
+      ctx.quadraticCurveTo(0, -50, 100, -50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(80, -120); ctx.lineTo(180, -50); ctx.lineTo(80, 20); ctx.fill();
+    });
+
+    createIconTexture('icon-winding', ctx => {
+      ctx.lineWidth = 60;
+      ctx.beginPath(); ctx.moveTo(0, 150);
+      ctx.bezierCurveTo(0, 50, 120, 50, 120, -50);
+      ctx.bezierCurveTo(120, -150, -50, -100, -50, -180); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, -150); ctx.lineTo(-50, -240); ctx.lineTo(-120, -150); ctx.fill();
+    });
+
+    createIconTexture('icon-narrow', ctx => {
+      ctx.lineWidth = 60;
+      ctx.beginPath(); ctx.moveTo(-100, 200); ctx.lineTo(-100, 50); ctx.lineTo(-50, -50); ctx.lineTo(-50, -200); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(100, 200); ctx.lineTo(100, 50); ctx.lineTo(50, -50); ctx.lineTo(50, -200); ctx.stroke();
+    });
+
+    createIconTexture('icon-alert', ctx => {
+      ctx.beginPath(); ctx.moveTo(-35, -150); ctx.lineTo(35, -150); ctx.lineTo(15, 80); ctx.lineTo(-15, 80); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 150, 35, 0, Math.PI * 2); ctx.fill();
+    });
+  </script>
+
+  <a-scene id="scene" renderer="colorManagement: true; antialias: true" shadow="type: pcfsoft"
+    vr-mode-ui="enabled: false" fog="type: linear; color: #cfe6f5; near: 30; far: 180" background="color: #a9d3ef">
+
+    <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
+
+    <!-- Pencahayaan -->
+    <a-entity light="type: hemisphere; color: #eaf4ff; groundColor: #7d8a68; intensity: 1.6"></a-entity>
+    <a-entity id="lightTarget" position="0 0 0"></a-entity>
+    <a-entity position="35 50 30"
+      light="type: directional; color: #fff4e0; intensity: 2.4; target: #lightTarget; castShadow: true; shadowMapWidth: 2048; shadowMapHeight: 2048; shadowCameraLeft: -30; shadowCameraRight: 30; shadowCameraTop: 30; shadowCameraBottom: -30; shadowCameraNear: 1; shadowCameraFar: 150; shadowBias: -0.0005">
+    </a-entity>
+
+    <!-- Lingkungan Kota -->
+    <a-entity id="city" intersection-builder></a-entity>
+
+    <!-- Kursor Interaksi -->
+    <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
+
+    <!-- KAMERA RIG -->
+    <a-entity id="cameraRig" position="2 1.6 12" rotation="0 15 0">
+      <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls-enabled="false"></a-camera>
+    </a-entity>
+
+    <!-- ===================== RAMBU PERINGATAN (KUNING) ===================== -->
+
+    <!-- 1. Persimpangan 4 -->
+    <a-entity id="sign1" class="sign" position="-4 0 6" rotation="0 25 0"
+      sign-interactive="title: Persimpangan 4; desc: Memberikan peringatan kepada pengemudi bahwa akan ada persimpangan empat arah di depan, sehingga harus lebih berhati-hati.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-plus; transparent: true" position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- 2. Tikungan ke Kiri -->
+    <a-entity id="sign2" class="sign" position="-4 0 2" rotation="0 25 0"
+      sign-interactive="title: Tikungan ke Kiri; desc: Peringatan bahwa jalan di depan akan menikung tajam ke arah kiri. Kurangi kecepatan untuk menjaga kestabilan kendaraan.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-left; transparent: true" position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- 3. Tikungan ke Kanan -->
+    <a-entity id="sign3" class="sign" position="-4 0 -2" rotation="0 25 0"
+      sign-interactive="title: Tikungan ke Kanan; desc: Peringatan bahwa jalan di depan akan menikung tajam ke arah kanan. Segera sesuaikan laju kendaraan Anda.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-right; transparent: true" position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- 4. Jalan Berkelok -->
+    <a-entity id="sign4" class="sign" position="-4 0 -6" rotation="0 25 0"
+      sign-interactive="title: Jalan Berkelok; desc: Peringatan bahwa kondisi jalan di depan berkelok-kelok. Tetap waspada terhadap kendaraan dari arah berlawanan.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-winding; transparent: true"
+          position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- 5. Penyempitan Jalan -->
+    <a-entity id="sign5" class="sign" position="-4 0 -10" rotation="0 25 0"
+      sign-interactive="title: Penyempitan Jalan; desc: Peringatan bahwa badan jalan di depan akan menyempit. Utamakan kendaraan yang masuk lebih dahulu.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-narrow; transparent: true" position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- 6. Hati-Hati -->
+    <a-entity id="sign6" class="sign" position="-4 0 -14" rotation="0 25 0"
+      sign-interactive="title: Hati-Hati; desc: Peringatan bahaya lain di depan yang tidak ditunjukkan dengan simbol khusus. Selalu siaga dan kurangi kecepatan.">
+      <a-box class="clickable" width="1.5" height="3" depth="0.5" position="0 1.5 0"
+        material="opacity: 0; transparent: true; depthWrite: false"></a-box>
+      <a-ring class="highlight-ring" radius-inner="0.75" radius-outer="0.9" color="#33d6ff" position="0 0.02 0"
+        rotation="-90 0 0" visible="false"></a-ring>
+
+      <a-cylinder radius="0.04" height="2.2" color="#7f8c8d" position="0 1.1 0" shadow="cast: true"></a-cylinder>
+      <a-entity position="0 2.2 0.05" shadow="cast: true">
+        <a-plane width="1.0" height="1.0" color="#111" rotation="0 0 45"></a-plane>
+        <a-plane width="0.92" height="0.92" color="#ffcc00" rotation="0 0 45" position="0 0 0.01"></a-plane>
+        <a-plane width="0.9" height="0.9" material="src: #icon-alert; transparent: true" position="0 0 0.02"></a-plane>
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+
+  <!-- ===================== UI 2D (HTML/CSS overlay) ===================== -->
+  <div id="hud">
+    <header class="topbar">
+      <button id="navBackButton" class="nav-btn" type="button">← KEMBALI</button>
+      <div class="status">
+        <h1 class="hide-sm">BELAJAR RAMBU LALU LINTAS</h1>
+        <h1 style="display:none;" id="mobileTitle">RAMBU</h1>
+      </div>
+      <button id="navHomeButton" class="nav-btn" type="button">HOME ⌂</button>
+    </header>
+
+    <div class="instruction" id="instructionText">
+      Pilih rambu kuning untuk mempelajari arti dan fungsinya.
+    </div>
+
+    <!-- Panel Informasi Rambu -->
+    <section id="infoPanel" class="panel" aria-live="polite">
+      <div>
+        <div id="infoCategory" class="eyebrow">KATEGORI</div>
+        <h2 id="infoTitle">Nama Rambu</h2>
+        <p id="infoDesc">Penjelasan arti dan fungsi rambu lalu lintas.</p>
+      </div>
+      <div class="actions">
+        <button id="btnNextSign" class="btn secondary" type="button">SELANJUTNYA</button>
+        <button id="btnClosePanel" class="btn primary" type="button">TUTUP</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="loader">
+    <div style="text-align:center">
+      <div class="spin"></div>
+      <div>Memuat Rambu…</div>
+    </div>
+  </div>
+
+  <script>
+    // Referensi UI
+    const infoPanel = document.getElementById('infoPanel');
+    const infoTitle = document.getElementById('infoTitle');
+    const infoDesc = document.getElementById('infoDesc');
+    const infoCategory = document.getElementById('infoCategory');
+    const btnClosePanel = document.getElementById('btnClosePanel');
+    const btnNextSign = document.getElementById('btnNextSign');
+    const instructionText = document.getElementById('instructionText');
+    const cameraRig = document.getElementById('cameraRig');
+
+    // State Navigasi
+    let currentSignIndex = -1;
+
+    // Default Camera Pos & Rot
+    const defPos = { x: 2, y: 1.6, z: 12 };
+    const defRot = { x: 0, y: 15, z: 0 };
+
+    // Fungsi pergerakan kamera ke rambu
+    window.focusOnSign = function (signEl) {
+      const signs = Array.from(document.querySelectorAll('.sign'));
+      currentSignIndex = signs.indexOf(signEl);
+
+      const pos = signEl.getAttribute('position');
+
+      // Targetkan kamera 3 meter di depan dan 1 meter ke kanan rambu agar pas di sisi kiri layar
+      const targetX = pos.x + 3;
+      const targetY = 1.6;
+      const targetZ = pos.z + 4;
+
+      // Sudut menghadap rambu
+      const targetRotY = 28;
+
+      cameraRig.removeAttribute('animation__pos');
+      cameraRig.removeAttribute('animation__rot');
+
+      // A-Frame animation component 
+      cameraRig.setAttribute('animation__pos', `property: position; to: ${targetX} ${targetY} ${targetZ}; dur: 800; easing: easeInOutCubic`);
+      cameraRig.setAttribute('animation__rot', `property: rotation; to: 0 ${targetRotY} 0; dur: 800; easing: easeInOutCubic`);
+    };
+
+    // Fungsi navigasi ke rambu selanjutnya
+    window.nextSign = function () {
+      const signs = Array.from(document.querySelectorAll('.sign'));
+      if (signs.length === 0) return;
+
+      // Ke rambu berikutnya, atau kembali ke awal jika sudah di akhir
+      currentSignIndex = (currentSignIndex + 1) % signs.length;
+      const nextEl = signs[currentSignIndex];
+
+      // Update Highlight
+      document.querySelectorAll('.highlight-ring').forEach(ring => ring.setAttribute('visible', 'false'));
+      const highlight = nextEl.querySelector('.highlight-ring');
+      if (highlight) highlight.setAttribute('visible', 'true');
+
+      // Pindahkan Kamera
+      window.focusOnSign(nextEl);
+
+      // Tampilkan Info
+      const interactive = nextEl.components['sign-interactive'];
+      if (interactive) {
+        window.showSignInfo(interactive.data.title, interactive.data.desc, interactive.data.category);
+      }
+    };
+
+    // Event Listener Selanjutnya
+    btnNextSign.addEventListener('click', window.nextSign);
+
+    // Fungsi reset kamera
+    window.resetCamera = function () {
+      currentSignIndex = -1;
+      cameraRig.removeAttribute('animation__pos');
+      cameraRig.removeAttribute('animation__rot');
+
+      cameraRig.setAttribute('animation__pos', `property: position; to: ${defPos.x} ${defPos.y} ${defPos.z}; dur: 800; easing: easeInOutCubic`);
+      cameraRig.setAttribute('animation__rot', `property: rotation; to: ${defRot.x} ${defRot.y} ${defRot.z}; dur: 800; easing: easeInOutCubic`);
+    };
+
+    // Fungsi menampilkan panel info
+    window.showSignInfo = function (title, desc, category) {
+      infoTitle.textContent = title;
+      infoDesc.textContent = desc;
+      infoCategory.textContent = category;
+      instructionText.style.opacity = '0';
+      infoPanel.classList.add('is-visible');
+    }
+
+    function closeAndReset() {
+      infoPanel.classList.remove('is-visible');
+      instructionText.style.opacity = '1';
+      document.querySelectorAll('.highlight-ring').forEach(ring => ring.setAttribute('visible', 'false'));
+      window.resetCamera();
+    }
+
+    btnClosePanel.addEventListener('click', closeAndReset);
+
+    // Navigasi
+    document.getElementById('navHomeButton').addEventListener('click', () => {
+      window.location.href = "index.html";
+    });
+
+    document.getElementById('navBackButton').addEventListener('click', () => {
+      // Mengikuti pola navigasi (kembali ke index jika rambu adalah menu level 1)
+      window.location.href = "index.html";
+    });
+
+    // Hilangkan loader saat scene siap
+    const scene = document.querySelector('a-scene');
+    if (scene.hasLoaded) {
+      document.getElementById('loader').classList.add('done');
+    } else {
+      scene.addEventListener('loaded', () => {
+        document.getElementById('loader').classList.add('done');
       });
-    </script>
-  </body>
+    }
+
+    // Responsive title fallback
+    if (window.innerWidth <= 760) {
+      document.querySelector('.status h1.hide-sm').style.display = 'none';
+      document.getElementById('mobileTitle').style.display = 'block';
+    }
+  </script>
+</body>
+
 </html>

@@ -2,96 +2,454 @@
 <html lang="id">
 
 <head>
-  <meta charset="UTF-8" />
-  <title>SIMReady VR - Home</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMReady VR - Beranda</title>
+  <meta name="description" content="SIMReady VR - Virtual Road Safety Learning Experience.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+  <style>
+    :root {
+      --glass: rgba(12, 18, 30, 0.74);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --text: #f4f7fb;
+      --muted: #b7c2d3;
+      --accent: #33d6ff;
+      --ok: #2ee59d;
+      --bad: #ff4d6a;
+      --warn: #ffc93c;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #a9d3ef;
+      font-family: 'Outfit', system-ui, sans-serif;
+      color: var(--text);
+    }
+
+    /* ---------- Lapisan UI 2D ---------- */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #hud a,
+    #hud button,
+    #hud .topbar > * {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      padding: 12px 30px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .status h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      color: var(--accent);
+    }
+
+    /* ---------- Hero & Grid ---------- */
+    .hero-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(1000px, calc(100% - 40px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+    }
+
+    .title {
+      font-size: clamp(32px, 5vw, 64px);
+      font-weight: 800;
+      letter-spacing: .02em;
+      color: #fff;
+      margin: 0;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: clamp(16px, 2vw, 20px);
+      line-height: 1.6;
+      color: #e2e8f0;
+      max-width: 650px;
+      margin: 0;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+      font-weight: 600;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 30px 24px;
+      text-decoration: none;
+      color: var(--text);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .card:hover {
+      background: rgba(30, 42, 64, .9);
+      border-color: var(--accent);
+      transform: translateY(-6px);
+      box-shadow: 0 15px 40px rgba(51, 214, 255, .25);
+    }
+
+    .card-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: rgba(51, 214, 255, .15);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 800;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .card-icon {
+      transform: scale(1.1) rotate(5deg);
+      background: rgba(51, 214, 255, .25);
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #0d1626, #16304d);
+      transition: opacity .5s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    #loader .spin {
+      width: 42px; height: 42px; margin: 0 auto 14px;
+      border: 4px solid rgba(255,255,255,.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 760px) {
+      .hero-container { gap: 16px; }
+      .card-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .card { padding: 20px 16px; gap: 10px; }
+      .card h3 { font-size: 16px; }
+      .card p { font-size: 12px; }
+      .card-icon { width: 48px; height: 48px; font-size: 20px; border-radius: 12px; }
+    }
+  </style>
+
+  <script>
+    /* ============================================================
+       DIMENSI DUNIA (satuan: meter)
+       Sama dengan situasi.html untuk konsistensi visual.
+       ============================================================ */
+    window.ROAD = {
+      H: 6.6,      // setengah lebar jalan
+      L: 3.3,      // lebar lajur
+      SW: 4.5,     // lebar trotoar
+      R: 160,      // panjang ruas jalan
+      STOP: 11.6   // posisi garis henti
+    };
+
+    /* Membangun persimpangan secara terstruktur */
+    AFRAME.registerComponent('intersection-builder', {
+      init: function () {
+        const T = THREE;
+        const { H, L, SW, R, STOP } = window.ROAD;
+        const g = new T.Group();
+
+        const canvasTex = (w, h, draw) => {
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          draw(c.getContext('2d'), w, h);
+          const t = new T.CanvasTexture(c);
+          t.colorSpace = T.SRGBColorSpace;
+          t.wrapS = t.wrapT = T.RepeatWrapping;
+          t.anisotropy = 8;
+          return t;
+        };
+        const withRepeat = (tex, rx, ry) => { const t = tex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; };
+
+        const asphaltTex = canvasTex(256, 256, (x, w, h) => {
+          x.fillStyle = '#44474d'; x.fillRect(0, 0, w, h);
+          for (let i = 0; i < 2600; i++) {
+            const v = 50 + Math.random() * 40;
+            x.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + Math.random() * 0.4})`;
+            x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+          }
+        });
+        const paveTex = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = '#cfccc4'; x.fillRect(0, 0, w, h);
+          x.strokeStyle = '#b3b0a8'; x.lineWidth = 2;
+          for (let i = 0; i <= w; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+        });
+        const facadeCache = {};
+        const facadeTex = (wall) => facadeCache[wall] || (facadeCache[wall] = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = wall; x.fillRect(0, 0, w, h);
+          x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(0, 118, w, 10);
+          x.fillStyle = '#eef0f2'; x.fillRect(24, 20, 80, 82);
+          const gr = x.createLinearGradient(0, 24, 0, 98);
+          gr.addColorStop(0, '#9cc3dd'); gr.addColorStop(1, '#4b6b84');
+          x.fillStyle = gr; x.fillRect(28, 24, 72, 74);
+          x.fillStyle = '#eef0f2'; x.fillRect(62, 24, 4, 74);
+          x.fillStyle = 'rgba(255,255,255,0.28)'; x.fillRect(28, 24, 72, 9);
+        }));
+
+        const std = (opts) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.92, metalness: 0 }, opts));
+
+        const plane = (w, d, mat, x, y, z) => {
+          const geo = new T.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
+          const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m;
+        };
+        const box = (w, h, d, mat, x, y, z, cast) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z); m.receiveShadow = true; m.castShadow = !!cast; g.add(m); return m;
+        };
+
+        plane(700, 700, std({ color: '#6f9e52' }), 0, -0.05, 0);
+
+        plane(2 * H, 2 * R, std({ map: withRepeat(asphaltTex, 2 * H / 6, 2 * R / 6) }), 0, 0.01, 0);
+        const ewLen = R - H;
+        const ewMat = std({ map: withRepeat(asphaltTex, ewLen / 6, 2 * H / 6) });
+        plane(ewLen, 2 * H, ewMat, (R + H) / 2, 0.01, 0);
+        plane(ewLen, 2 * H, ewMat, -(R + H) / 2, 0.01, 0);
+
+        const c = (R + H) / 2;
+        const paveMat = std({ map: withRepeat(paveTex, ewLen / 2, ewLen / 2) });
+        const curbMat = std({ color: '#e4e2dc' });
+        const lawnMat = std({ color: '#79aa5a' });
+        const inner = H + SW, lawnLen = R - inner, lc = (R + inner) / 2;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          box(ewLen, 0.15, ewLen, paveMat, sx * c, 0.075, sz * c);
+          box(0.3, 0.18, ewLen, curbMat, sx * (H + 0.15), 0.09, sz * c);
+          box(ewLen - 0.3, 0.18, 0.3, curbMat, sx * (c + 0.15), 0.09, sz * (H + 0.15));
+          box(lawnLen, 0.2, lawnLen, lawnMat, sx * lc, 0.1, sz * lc);
+        });
+
+        const rects = [];
+        const approach = (k) => {
+          const out = [];
+          const p = (x, z, w, d) => out.push({ x, z, w, d });
+          for (let x = -H + 0.75; x <= H - 0.74; x += 1.0) p(x, H + 2.5, 0.5, 3.0); 
+          const x1 = -H + 0.3, x2 = -0.3;
+          p((x1 + x2) / 2, STOP - 0.2 + 0.0, x2 - x1, 0.45); 
+          const z0 = H + 4.5, zMid = H + 40;
+          p(-0.14, (z0 + zMid) / 2, 0.12, zMid - z0); 
+          p(0.14, (z0 + zMid) / 2, 0.12, zMid - z0); 
+          for (let z = zMid + 4; z < R - 4; z += 8) p(0, z + 1.5, 0.15, 3); 
+          [-L, L].forEach(lx => {
+            p(lx, (z0 + H + 20) / 2, 0.12, H + 20 - z0); 
+            for (let z = H + 24; z < R - 4; z += 9) p(lx, z + 1.5, 0.12, 3); 
+          });
+          [-(H - 0.3), H - 0.3].forEach(ex => p(ex, (z0 + R) / 2, 0.15, R - z0)); 
+          const th = k * Math.PI / 2, cs = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th));
+          out.forEach(r => rects.push({ x: r.x * cs + r.z * sn, z: -r.x * sn + r.z * cs, w: k % 2 ? r.d : r.w, d: k % 2 ? r.w : r.d }));
+        };
+        [0, 1, 2, 3].forEach(approach);
+        const mGeo = new T.PlaneGeometry(1, 1); mGeo.rotateX(-Math.PI / 2);
+        const mMat = std({ color: '#f3f3ee', roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const marks = new T.InstancedMesh(mGeo, mMat, rects.length);
+        const mx = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), scl = new T.Vector3();
+        rects.forEach((r, i) => { pos.set(r.x, 0.025, r.z); scl.set(r.w, 1, r.d); mx.compose(pos, q, scl); marks.setMatrixAt(i, mx); });
+        marks.receiveShadow = true;
+        g.add(marks);
+
+        const trees = [];
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          for (let d = 22; d < 120; d += 11) {
+            if (!(sz > 0 && d < 50)) trees.push([sx * (H + 3.3), sz * d]);
+            trees.push([sx * d, sz * (H + 3.3)]);
+          }
+        });
+        const trunk = new T.InstancedMesh(new T.CylinderGeometry(0.14, 0.2, 2.4, 6), std({ color: '#6b4a32' }), trees.length);
+        const crown = new T.InstancedMesh(new T.IcosahedronGeometry(1.6, 0), std({ color: '#ffffff', flatShading: true }), trees.length);
+        const greens = ['#4f8f3a', '#5d9c43', '#447f35', '#6aa64b'].map(h => new T.Color(h));
+        trees.forEach(([tx, tz], i) => {
+          const s = 0.85 + ((i * 37) % 10) / 25;
+          pos.set(tx, 1.35, tz); scl.set(1, 1, 1); mx.compose(pos, q, scl); trunk.setMatrixAt(i, mx);
+          pos.set(tx, 2.6 + 1.5 * s, tz); scl.set(s, s * 1.1, s); mx.compose(pos, q, scl); crown.setMatrixAt(i, mx);
+          crown.setColorAt(i, greens[i % greens.length]);
+        });
+        trunk.castShadow = crown.castShadow = true;
+        g.add(trunk, crown);
+
+        const walls = ['#f2a65a', '#5fc4b8', '#f6d55c', '#ed6a5a', '#9bc1bc', '#e8d5b7', '#8fb8de', '#c3a6d8'];
+        const roofMat = std({ color: '#7d8590' });
+        let seed = 7;
+        const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+        const building = (cx, cz, w, d, h) => {
+          const wall = walls[Math.floor(rnd() * walls.length)];
+          const ft = facadeTex(wall);
+          const mFront = std({ map: withRepeat(ft, Math.max(1, Math.round(w / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const mSide = std({ map: withRepeat(ft, Math.max(1, Math.round(d / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const b = box(w, h, d, [mSide, mSide, roofMat, roofMat, mFront, mFront], cx, h / 2, cz, true);
+          box(w + 0.4, 0.4, d + 0.4, std({ color: '#d9d6cf' }), cx, h + 0.2, cz, false);
+        };
+        const set = 14.5;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          building(sx * (set + 6), sz * (set + 6), 12, 12, 9 + rnd() * 10);
+          for (let p = set + 14; p < 120;) {
+            const w = 10 + rnd() * 5, d = 10 + rnd() * 4;
+            building(sx * (set + d / 2), sz * (p + w / 2), d, w, 7 + rnd() * 15);
+            const w2 = 10 + rnd() * 5, d2 = 10 + rnd() * 4;
+            building(sx * (p + w2 / 2), sz * (set + d2 / 2), w2, d2, 7 + rnd() * 15);
+            p += Math.max(w, w2) + 2.5;
+          }
+        });
+        
+        this.el.setObject3D('city', g);
+      }
+    });
+  </script>
 </head>
 
 <body>
-  <a-scene background="color: #74B9FF">
+  <!-- ===================== DUNIA 3D ===================== -->
+  <a-scene id="scene" renderer="colorManagement: true; antialias: true" shadow="type: pcfsoft"
+    vr-mode-ui="enabled: false" fog="type: linear; color: #cfe6f5; near: 30; far: 180" background="color: #a9d3ef">
+    
+    <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
 
-    <!-- ============================================== -->
-    <!-- LINGKUNGAN (ENVIRONMENT)                       -->
-    <!-- ============================================== -->
-
-    <!-- Lantai Rumput -->
-    <a-plane position="0 0 -10" rotation="-90 0 0" width="50" height="50" color="#55E6C1"></a-plane>
-
-    <!-- Jalan Aspal -->
-    <a-plane position="0 0.01 -10" rotation="-90 0 0" width="10" height="50" color="#2D3436"></a-plane>
-
-    <!-- Marka Jalan (Garis Putus-putus) -->
-    <a-entity position="0 0.02 0">
-      <a-box position="0 0 -2" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
-      <a-box position="0 0 -5" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
-      <a-box position="0 0 -8" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
-      <a-box position="0 0 -11" width="0.2" height="0.01" depth="1.5" color="#FFFFFF"></a-box>
+    <!-- Pencahayaan -->
+    <a-entity light="type: hemisphere; color: #eaf4ff; groundColor: #7d8a68; intensity: 1.6"></a-entity>
+    <a-entity id="lightTarget" position="0 0 5"></a-entity>
+    <a-entity position="35 50 30"
+      light="type: directional; color: #fff4e0; intensity: 2.4; target: #lightTarget; castShadow: true; shadowMapWidth: 2048; shadowMapHeight: 2048; shadowCameraLeft: -50; shadowCameraRight: 50; shadowCameraTop: 50; shadowCameraBottom: -50; shadowCameraNear: 1; shadowCameraFar: 180; shadowBias: -0.0005">
     </a-entity>
 
-    <!-- Hiasan: Kerucut Lalu Lintas di Pinggir Jalan -->
-    <a-entity position="-3.5 0 -4">
-      <a-cone position="0 0.6 0" radius-bottom="0.4" radius-top="0.1" height="1.2" color="#FF7675"></a-cone>
-      <a-box position="0 0.05 0" width="1" height="0.1" depth="1" color="#2D3436"></a-box>
+    <!-- Kamera Berputar Perlahan (Sinematik) -->
+    <a-entity position="0 18 0" animation="property: rotation; to: 0 -360 0; loop: true; dur: 80000; easing: linear">
+      <a-camera position="0 0 40" fov="45" look-controls="enabled: false" wasd-controls-enabled="false" rotation="-15 0 0"></a-camera>
     </a-entity>
 
-    <a-entity position="3.5 0 -6">
-      <a-cone position="0 0.6 0" radius-bottom="0.4" radius-top="0.1" height="1.2" color="#FF7675"></a-cone>
-      <a-box position="0 0.05 0" width="1" height="0.1" depth="1" color="#2D3436"></a-box>
-    </a-entity>
-
-
-    <!-- ============================================== -->
-    <!-- MAIN MENU PANEL (Mengambang Naik-Turun)        -->
-    <!-- ============================================== -->
-    <a-entity position="0 2.2 -4.5"
-      animation="property: position; to: 0 2.35 -4.5; dir: alternate; dur: 2500; loop: true; easing: easeInOutSine">
-
-      <!-- Latar Belakang Panel Putih -->
-      <a-plane width="6.5" height="3.5" color="#FFFFFF" material="opacity: 0.95; transparent: true"></a-plane>
-      <!-- Border Biru di belakang panel -->
-      <a-box position="0 0 -0.05" width="6.7" height="3.7" depth="0.05" color="#0984E3"></a-box>
-
-      <!-- Judul -->
-      <a-text value="SIMREADY VR" position="0 1.1 0.1" align="center" width="9" color="#2D3436"
-        font="mozillavr"></a-text>
-      <a-text value="Virtual Road Safety Learning" position="0 0.5 0.1" align="center" width="5.5"
-        color="#636E72"></a-text>
-
-      <!-- Keterangan -->
-      <a-text value="Pelajari rambu lalu lintas, kenali potensi bahaya,\ndan uji pemahamanmu secara interaktif."
-        position="0 -0.1 0.1" align="center" width="4.5" color="#2D3436"></a-text>
-
-      <!-- Tombol Mulai (Interaktif) -->
-      <a-entity id="startButton" class="clickable" position="0 -1.1 0.15"
-        animation__hover="property: scale; to: 1.08 1.08 1.08; startEvents: mouseenter; dur: 200"
-        animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave; dur: 200">
-        <a-box width="3.2" height="0.7" depth="0.1" color="#00B894"></a-box>
-        <a-text value="MULAI SEKARANG" position="0 0 0.06" align="center" width="4.5" color="#FFFFFF"
-          font="mozillavr"></a-text>
-      </a-entity>
-
-    </a-entity>
-
-    <!-- ============================================== -->
-    <!-- KAMERA & KURSOR                                -->
-    <!-- ============================================== -->
-    <a-camera position="0 1.6 0">
-      <!-- Kursor Mouse untuk Desktop -->
-      <a-entity cursor="fuse: false; rayOrigin: mouse;" raycaster="objects: .clickable"></a-entity>
-      <!-- Kursor Titik untuk Mode VR Headset -->
-      <a-cursor color="#2D3436" raycaster="objects: .clickable"
-        animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150">
-      </a-cursor>
-    </a-camera>
+    <!-- Lingkungan Kota -->
+    <a-entity id="city" intersection-builder></a-entity>
 
   </a-scene>
 
+  <!-- ===================== UI 2D (Overlay) ===================== -->
+  <div id="hud">
+    <header class="topbar">
+      <div class="status">
+        <h1>SIMREADY VR</h1>
+      </div>
+    </header>
+
+    <main class="hero-container">
+      <h1 class="title">Virtual Road Safety<br>Learning Experience</h1>
+      <p class="subtitle">Pelajari rambu lalu lintas, kenali potensi bahaya, dan uji pemahamanmu secara interaktif di lingkungan 3D yang realistis.</p>
+      
+      <div class="card-grid">
+        <a href="rambu.html" class="card">
+          <div class="card-icon">1</div>
+          <h3>Rambu Lalu Lintas</h3>
+          <p>Mengenal berbagai rambu dan marka jalan secara detail.</p>
+        </a>
+        <a href="situasi.html" class="card">
+          <div class="card-icon">2</div>
+          <h3>Simulasi Persimpangan</h3>
+          <p>Latih pengambilan keputusan aman di persimpangan.</p>
+        </a>
+        <a href="hazard.html" class="card">
+          <div class="card-icon">3</div>
+          <h3>Potensi Bahaya</h3>
+          <p>Identifikasi berbagai objek bahaya di jalan raya.</p>
+        </a>
+        <a href="quiz.html" class="card">
+          <div class="card-icon">4</div>
+          <h3>Kuis Keselamatan</h3>
+          <p>Uji pengetahuan keselamatan berkendara Anda.</p>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <div id="loader">
+    <div style="text-align:center">
+      <div class="spin"></div>
+      <div>Memuat SIMReady VR…</div>
+    </div>
+  </div>
+
   <script>
-    // Pindah ke halaman rambu saat diklik
-    document.querySelector("#startButton").addEventListener("click", function () {
-      window.location.href = "rambu.html";
-    });
+    // Hilangkan loader saat scene siap
+    const scene = document.querySelector('a-scene');
+    if (scene.hasLoaded) {
+      document.getElementById('loader').classList.add('done');
+    } else {
+      scene.addEventListener('loaded', () => {
+        document.getElementById('loader').classList.add('done');
+      });
+    }
   </script>
 </body>
-
 </html>
