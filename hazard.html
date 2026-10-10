@@ -180,6 +180,7 @@
       transition: all 0.2s;
       text-decoration: none;
       text-align: center;
+      box-sizing: border-box;
     }
 
     .btn:hover {
@@ -487,11 +488,11 @@
       rig.setAttribute('rotation', s.camRot);
 
       // Reset Hazards visibility
-      document.querySelectorAll('.hazard-target').forEach(el => el.setAttribute('scale', '0 0 0'));
+      document.querySelectorAll('.hazard-target').forEach(el => el.setAttribute('visible', 'false'));
       document.querySelectorAll('.highlight').forEach(el => el.setAttribute('visible', 'false'));
 
       // Show correct hazard
-      document.getElementById(s.id).setAttribute('scale', '1 1 1');
+      document.getElementById(s.id).setAttribute('visible', 'true');
 
       // Reset UI Phase
       currentPhase = 1;
@@ -512,6 +513,22 @@
       document.getElementById('phase2').style.display = 'none';
       document.getElementById('finishPanel').style.display = 'block';
     }
+
+    // Component untuk memastikan interior mobil GLB dirender sempurna dari dalam
+    AFRAME.registerComponent('car-interior-setup', {
+      init: function () {
+        this.el.addEventListener('model-loaded', () => {
+          const obj = this.el.getObject3D('mesh');
+          if (!obj) return;
+          obj.traverse((child) => {
+            if (child.isMesh && child.material) {
+              child.material.side = THREE.DoubleSide;
+              child.material.needsUpdate = true;
+            }
+          });
+        });
+      }
+    });
 
     // Component interaksi klik bahaya
     AFRAME.registerComponent('hazard-clickable', {
@@ -564,12 +581,6 @@
   <a-scene id="scene" renderer="colorManagement: true; antialias: true" shadow="type: pcfsoft"
     vr-mode-ui="enabled: false" fog="type: linear; color: #cfe6f5; near: 30; far: 180" background="color: #a9d3ef">
 
-    <a-assets>
-      <a-asset-item id="personModel" src="assets/models/brisk-walk-sam-3d-person-animated.glb"></a-asset-item>
-      <a-asset-item id="personModel2" src="assets/models/3d_1dbdc0d9b93b4f52b54751d0_1789921724360.glb"></a-asset-item>
-      <a-asset-item id="carModel" src="assets/models/sedan_glb_format_with_interior.glb"></a-asset-item>
-    </a-assets>
-
     <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
 
     <!-- Pencahayaan -->
@@ -582,80 +593,91 @@
     <!-- Lingkungan -->
     <a-entity id="city" intersection-builder></a-entity>
 
-    <!-- PLAYER CAR RIG DENGAN POV INTERIOR MOBIL GLB & DASHBOARD PRIMITIF -->
+    <!-- PLAYER CAR RIG DENGAN KABIN SEDERHANA (SOLUSI STABIL) -->
     <a-entity id="playerRig" position="1.65 0 16">
-      <!-- Model Mobil Player (Tampak luar) -->
-      <a-entity gltf-model="#carModel" position="0 0 0" shadow="cast: true"></a-entity>
-
-      <!-- Kamera (Mata Pengemudi) diletakkan di dalam kabin -->
-      <a-entity id="playerCam" camera look-controls="pointerLockEnabled: false" position="0.35 1.1 0.1">
+      <!-- Kamera POV Interior -->
+      <a-entity id="playerCam" camera="near: 0.1; far: 1000; fov: 60" look-controls="pointerLockEnabled: false"
+        position="-0.35 1.15 0.1">
         <a-entity cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .clickable; far: 60"></a-entity>
+      </a-entity>
 
-        <!-- Interior Dashboard Primitif yang dikembalikan agar selalu terlihat jelas -->
-        <a-entity position="-0.35 -0.6 -0.8">
-          <!-- Dashboard Atas -->
-          <a-box width="3.5" height="0.4" depth="0.8" color="#1c1c1c" position="0 0 0"
-            material="roughness: 0.9"></a-box>
-          <!-- Panel Speedometer -->
-          <a-box width="0.8" height="0.3" depth="0.1" color="#0a0a0a" position="-0.5 0.25 -0.2"
-            rotation="-15 0 0"></a-box>
-          <a-plane width="0.6" height="0.2" color="#33d6ff" position="-0.5 0.26 -0.14" rotation="-15 0 0"
-            material="shader: flat; opacity: 0.3"></a-plane>
-
-          <!-- Setir -->
-          <a-entity position="-0.5 0.3 0.1" rotation="-15 0 0">
-            <a-torus radius="0.28" radius-tubular="0.025" color="#111" segments-tubular="32"></a-torus>
-            <a-box width="0.5" height="0.06" depth="0.02" color="#222" position="0 0 0"></a-box>
-            <a-box width="0.06" height="0.25" depth="0.02" color="#222" position="0 -0.15 0"></a-box>
-            <a-cylinder radius="0.08" height="0.04" color="#111" rotation="90 0 0"></a-cylinder>
-          </a-entity>
-        </a-entity>
+      <!-- Dashboard & Setir Sederhana -->
+      <a-entity id="cabin">
+        <!-- Dashboard Base -->
+        <a-box position="0 0.8 -0.5" width="1.9" height="0.3" depth="0.5" color="#1a1a1a"></a-box>
+        <!-- Center Console -->
+        <a-box position="0 0.45 -0.2" width="0.3" height="0.6" depth="0.8" color="#111"></a-box>
+        <!-- Speedometer Panel (Lebih rendah) -->
+        <a-box position="-0.35 0.98 -0.6" width="0.45" height="0.1" depth="0.2" color="#0a0a0a"></a-box>
+        <!-- Steering Wheel (Proporsional & bentuk ring) -->
+        <a-torus position="-0.35 0.92 -0.35" rotation="15 0 0" radius="0.16" radius-tubular="0.018"
+          color="#333"></a-torus>
+        <!-- Steering Column -->
+        <a-cylinder position="-0.35 0.85 -0.45" rotation="90 0 0" radius="0.035" height="0.2" color="#222"></a-cylinder>
+        <!-- A-Pillars (Tipis & Membingkai) -->
+        <a-box position="-0.85 1.3 -0.5" rotation="0 0 25" width="0.06" height="0.9" depth="0.1"
+          color="#1a1a1a"></a-box>
+        <a-box position="0.85 1.3 -0.5" rotation="0 0 -25" width="0.06" height="0.9" depth="0.1"
+          color="#1a1a1a"></a-box>
       </a-entity>
     </a-entity>
 
     <!-- ===================== OBJEK BAHAYA ===================== -->
 
-    <!-- 1. Pejalan Kaki (Animasi GLB) di area zebra cross -->
-    <a-entity id="pedestrian" class="hazard-target" position="-2 0 9.1" scale="0 0 0">
-      <!-- Orang 1 (Model Lama - Berjalan di tempat agar tidak berat) -->
-      <a-entity position="0 0 0">
-        <a-entity gltf-model="#personModel" rotation="0 90 0" scale="1 1 1" animation-mixer
-          shadow="cast: true"></a-entity>
+    <!-- 1. Pejalan Kaki (Animasi A-Frame) di area zebra cross -->
+    <a-entity id="pedestrian" class="hazard-target" position="-2 0 9.1" visible="false">
+      <!-- Orang 1 Bergerak -->
+      <a-entity position="0 0 0"
+        animation="property: position; to: 3.5 0 0; dir: alternate; dur: 4000; loop: true; easing: linear">
+        <a-box position="0 1.1 0" width="0.4" height="0.6" depth="0.25" color="#3498db" shadow="cast: true"></a-box>
+        <a-sphere position="0 1.6 0" radius="0.18" color="#f1c27d" shadow="cast: true"></a-sphere>
+        <a-box position="-0.1 0.4 0" width="0.12" height="0.8" depth="0.12" color="#2c3e50" shadow="cast: true"></a-box>
+        <a-box position="0.1 0.4 0" width="0.12" height="0.8" depth="0.12" color="#2c3e50" shadow="cast: true"></a-box>
         <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
           material="opacity:0; transparent:true"></a-box>
       </a-entity>
 
-      <!-- Orang 2 (Model Baru) -->
-      <a-entity position="-1.5 0 0.6">
-        <a-entity gltf-model="#personModel2" rotation="0 90 0" scale="1 1 1" animation-mixer
-          shadow="cast: true"></a-entity>
+      <!-- Orang 2 Bergerak -->
+      <a-entity position="-1.5 0 0.6"
+        animation="property: position; to: 2.0 0 0.6; dir: alternate; dur: 4500; loop: true; easing: linear">
+        <a-box position="0 1.05 0" width="0.35" height="0.55" depth="0.22" color="#e74c3c" shadow="cast: true"></a-box>
+        <a-sphere position="0 1.5 0" radius="0.16" color="#f1c27d" shadow="cast: true"></a-sphere>
+        <a-box position="-0.1 0.4 0" width="0.1" height="0.75" depth="0.1" color="#2c3e50" shadow="cast: true"></a-box>
+        <a-box position="0.1 0.4 0" width="0.1" height="0.75" depth="0.1" color="#2c3e50" shadow="cast: true"></a-box>
         <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
           material="opacity:0; transparent:true"></a-box>
       </a-entity>
 
-      <!-- Orang 3 (Model Lama - Statis tanpa animasi untuk hemat resource) -->
-      <a-entity position="-3 0 -0.5">
-        <a-entity gltf-model="#personModel" rotation="0 90 0" scale="0.95 0.95 0.95" shadow="cast: true"></a-entity>
-        <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
-          material="opacity:0; transparent:true"></a-box>
-      </a-entity>
-
-      <a-ring class="highlight" radius-inner="2.5" radius-outer="2.8" color="#FFD700" rotation="-90 0 0"
+      <!-- Highlight Ring disesuaikan ukurannya agar mencakup area -->
+      <a-ring class="highlight" radius-inner="2.8" radius-outer="3.1" color="#FFD700" rotation="-90 0 0"
         position="0 0.02 0" visible="false" material="shader: flat"></a-ring>
     </a-entity>
 
     <!-- 2. Mobil dari arah samping persimpangan -->
-    <a-entity id="sideCar" class="hazard-target" position="11 0 -1.65" rotation="0 180 0" scale="0 0 0">
-      <a-entity gltf-model="#carModel" shadow="cast: true"></a-entity>
+    <a-entity id="sideCar" class="hazard-target" position="11 0 -1.65" rotation="0 180 0" visible="false">
+      <!-- Mobil Merah Sederhana (A-Frame Primitives) -->
+      <a-entity position="0 0.4 0">
+        <!-- Body -->
+        <a-box position="0 0 0" width="1.8" height="0.6" depth="4.2" color="#cc0000" shadow="cast: true"></a-box>
+        <!-- Cabin -->
+        <a-box position="0 0.5 0.2" width="1.6" height="0.5" depth="2.2" color="#cc0000" shadow="cast: true"></a-box>
+        <!-- Windshield -->
+        <a-plane position="0 0.5 -0.92" rotation="-70 0 0" width="1.5" height="0.7" color="#222"></a-plane>
+        <!-- Wheels -->
+        <a-cylinder position="-0.9 -0.2 1.2" rotation="0 0 90" radius="0.3" height="0.2" color="#111"></a-cylinder>
+        <a-cylinder position="0.9 -0.2 1.2" rotation="0 0 90" radius="0.3" height="0.2" color="#111"></a-cylinder>
+        <a-cylinder position="-0.9 -0.2 -1.2" rotation="0 0 90" radius="0.3" height="0.2" color="#111"></a-cylinder>
+        <a-cylinder position="0.9 -0.2 -1.2" rotation="0 0 90" radius="0.3" height="0.2" color="#111"></a-cylinder>
+      </a-entity>
 
-      <a-box class="clickable" hazard-clickable width="4.5" height="1.8" depth="2" position="0 0.9 0"
+      <a-box class="clickable" hazard-clickable width="4.5" height="1.8" depth="4.5" position="0 0.9 0"
         material="opacity:0; transparent:true"></a-box>
       <a-ring class="highlight" radius-inner="2.5" radius-outer="2.8" color="#FFD700" rotation="-90 0 0"
         position="0 0.02 0" visible="false" material="shader: flat"></a-ring>
     </a-entity>
 
     <!-- 3. Perbaikan Jalan (Barrier & Kerucut) -->
-    <a-entity id="construction" class="hazard-target" position="1.65 0.1 -15" scale="0 0 0">
+    <a-entity id="construction" class="hazard-target" position="1.65 0.1 -15" visible="false">
       <a-box position="0 0.5 0" width="2.8" height="0.8" depth="0.2" color="#F1C40F" shadow="cast: true"></a-box>
       <a-box position="-1.3 0.5 0.11" width="0.3" height="0.8" depth="0.02" rotation="0 0 45" color="#222"
         shadow="cast: true"></a-box>
@@ -725,7 +747,7 @@
         <h2 class="eyebrow" style="color: var(--ok)">LATIHAN SELESAI</h2>
         <h3>Hebat Sekali!</h3>
         <p>Anda telah berhasil mengidentifikasi semua bahaya potensial dan mempelajari tindakan pencegahannya.</p>
-        <a href="quiz.html" class="btn primary" style="display: inline-block;">Lanjut ke Kuis</a>
+        <a href="quiz.html" class="btn primary" style="display: block;">Lanjut ke Kuis</a>
       </div>
     </div>
   </div>

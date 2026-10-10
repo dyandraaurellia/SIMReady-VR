@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+</head>
+<body style="margin:0; background:#222;">
+  <div id="logs" style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: white; color: black; font-family: sans-serif; font-size: 20px; padding: 10px; max-width: 800px; white-space: pre-wrap;">Logs:</div>
+  <script>
+    const logs = document.getElementById('logs');
+    function logMsg(msg) { logs.innerText += '\n' + msg; }
+    window.onerror = function(msg, url, line) { logMsg('ERR: ' + msg + ' @ ' + line); };
+    document.addEventListener('DOMContentLoaded', () => {
+      const car = document.querySelector('#the-car');
+      car.addEventListener('model-error', (e) => {
+        logMsg('MODEL ERROR: ' + e.detail.src + ' | ' + (e.detail.message || e.detail.format || 'unknown error'));
+      });
+      car.addEventListener('model-loaded', () => {
+        logMsg('MODEL LOADED SUCCESSFULLY!');
+        const obj = car.getObject3D('mesh');
+        if (!obj) {
+          logMsg('NO MESH FOUND!');
+          return;
+        }
+        const box = new THREE.Box3().setFromObject(obj);
+        logMsg('BBOX MIN: ' + box.min.x.toFixed(2) + ' ' + box.min.y.toFixed(2) + ' ' + box.min.z.toFixed(2));
+        logMsg('BBOX MAX: ' + box.max.x.toFixed(2) + ' ' + box.max.y.toFixed(2) + ' ' + box.max.z.toFixed(2));
+        obj.traverse((child) => {
+          if (child.isMesh) {
+            child.material = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+          }
+        });
+      });
+    });
+  </script>
+  <a-scene>
+    <a-assets>
+      <a-asset-item id="car" src="assets/models/sedan_glb_format_with_interior.glb"></a-asset-item>
+    </a-assets>
+
+    <a-entity light="type: hemisphere; color: #fff; intensity: 1.5"></a-entity>
+
+    <a-box position="0 1 -3" color="green" scale="1 1 1"></a-box>
+    <a-entity id="the-car" gltf-model="#car" position="0 0 -3" scale="1 1 1"></a-entity>
+
+    <a-entity camera look-controls position="0 1.6 0"></a-entity>
+  </a-scene>
+</body>
+</html>
