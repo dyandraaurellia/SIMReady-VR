@@ -515,25 +515,53 @@
     });
 
     createIconTexture('icon-left', ctx => {
-      ctx.lineWidth = 80;
-      ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(0, 50);
-      ctx.quadraticCurveTo(0, -50, -100, -50); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-80, -120); ctx.lineTo(-180, -50); ctx.lineTo(-80, 20); ctx.fill();
+      ctx.lineWidth = 75;
+      ctx.beginPath(); 
+      ctx.moveTo(30, 150); // Tiang sedikit di kanan agar seimbang
+      ctx.arcTo(30, -40, -100, -40, 45); // Tikungan siku 90 derajat dengan radius melengkung
+      ctx.lineTo(-60, -40); 
+      ctx.stroke();
+      
+      // Kepala panah besar ke kiri
+      ctx.beginPath(); 
+      ctx.moveTo(-40, -140); 
+      ctx.lineTo(-160, -40); 
+      ctx.lineTo(-40, 60); 
+      ctx.fill();
     });
 
     createIconTexture('icon-right', ctx => {
-      ctx.lineWidth = 80;
-      ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(0, 50);
-      ctx.quadraticCurveTo(0, -50, 100, -50); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(80, -120); ctx.lineTo(180, -50); ctx.lineTo(80, 20); ctx.fill();
+      ctx.lineWidth = 75;
+      ctx.beginPath(); 
+      ctx.moveTo(-30, 150); // Tiang sedikit di kiri agar seimbang
+      ctx.arcTo(-30, -40, 100, -40, 45); // Tikungan siku 90 derajat dengan radius melengkung
+      ctx.lineTo(60, -40); 
+      ctx.stroke();
+      
+      // Kepala panah besar ke kanan
+      ctx.beginPath(); 
+      ctx.moveTo(40, -140); 
+      ctx.lineTo(160, -40); 
+      ctx.lineTo(40, 60); 
+      ctx.fill();
     });
 
     createIconTexture('icon-winding', ctx => {
-      ctx.lineWidth = 60;
-      ctx.beginPath(); ctx.moveTo(0, 150);
-      ctx.bezierCurveTo(0, 50, 120, 50, 120, -50);
-      ctx.bezierCurveTo(120, -150, -50, -100, -50, -180); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(20, -150); ctx.lineTo(-50, -240); ctx.lineTo(-120, -150); ctx.fill();
+      ctx.lineWidth = 65;
+      ctx.beginPath();
+      ctx.moveTo(0, 180);
+      // Kurva ke kanan
+      ctx.bezierCurveTo(0, 70, 120, 80, 120, 0);
+      // Kurva kembali ke tengah
+      ctx.bezierCurveTo(120, -80, 0, -70, 0, -150);
+      ctx.stroke();
+
+      // Panah menghadap tepat ke atas
+      ctx.beginPath();
+      ctx.moveTo(-60, -135);
+      ctx.lineTo(0, -225);
+      ctx.lineTo(60, -135);
+      ctx.fill();
     });
 
     createIconTexture('icon-narrow', ctx => {

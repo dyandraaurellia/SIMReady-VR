@@ -4,187 +4,747 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIMReadyVR - Hazard Recognition</title>
+  <title>SIMReady VR - Hazard Detection</title>
+  <meta name="description" content="Latihan Deteksi Bahaya SIMReady VR">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+
   <style>
+    :root {
+      --glass: rgba(12, 18, 30, 0.74);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --text: #f4f7fb;
+      --muted: #b7c2d3;
+      --accent: #33d6ff;
+      --ok: #2ee59d;
+      --bad: #ff4d6a;
+      --warn: #ffc93c;
+      --btn: rgba(255, 255, 255, 0.08);
+      --btn-hover: rgba(255, 255, 255, 0.18);
+    }
+
     html,
     body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background: #a9d3ef;
+      font-family: 'Outfit', system-ui, sans-serif;
+      color: var(--text);
+    }
+
+    /* ---------- Lapisan UI 2D ---------- */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #hud a,
+    #hud button,
+    #hud .topbar>*,
+    #hud .side-panel {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      padding: 10px 24px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .status h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      color: var(--accent);
+    }
+
+    .status span {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* ---------- Side Panel ---------- */
+    .side-panel {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.4s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin: 0 0 8px 0;
+    }
+
+    h3 {
+      margin: 0 0 12px 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.6;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--glass-border);
+      margin: 20px 0;
+    }
+
+    .question {
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--btn);
+      border: 1px solid var(--glass-border);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: var(--btn-hover);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .btn.primary:hover {
+      background: #1abeff;
+    }
+
+    .btn.option-btn {
+      width: 100%;
+      text-align: left;
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      line-height: 1.4;
+    }
+
+    .btn.option-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn.option-btn:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .btn.option-btn.correct {
+      background: rgba(46, 229, 157, 0.15);
+      border-color: var(--ok);
+      color: #fff;
+    }
+
+    .btn.option-btn.wrong {
+      background: rgba(255, 77, 106, 0.15);
+      border-color: var(--bad);
+      color: #fff;
+    }
+
+    .feedback-box {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 4px solid transparent;
+    }
+
+    .feedback-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+
+    .feedback-box p {
+      font-size: 14px;
+    }
+
+    .feedback-box.success {
+      border-color: var(--ok);
+    }
+
+    .feedback-box.success h4 {
+      color: var(--ok);
+    }
+
+    .feedback-box.error {
+      border-color: var(--bad);
+    }
+
+    .feedback-box.error h4 {
+      color: var(--bad);
+    }
+
+    #finishPanel {
+      text-align: center;
+    }
+
+    /* Crosshair for feedback */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #0d1626, #16304d);
+      transition: opacity .5s ease;
+    }
+
+    #loader.done {
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
+
+  <script>
+    /* ============================================================
+       DIMENSI DUNIA & INTERSECTION BUILDER
+       ============================================================ */
+    window.ROAD = { H: 6.6, L: 3.3, SW: 4.5, R: 160, STOP: 11.6 };
+
+    AFRAME.registerComponent('intersection-builder', {
+      init: function () {
+        const T = THREE;
+        const { H, L, SW, R, STOP } = window.ROAD;
+        const g = new T.Group();
+
+        const canvasTex = (w, h, draw) => {
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          draw(c.getContext('2d'), w, h);
+          const t = new T.CanvasTexture(c);
+          t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 8;
+          return t;
+        };
+        const withRepeat = (tex, rx, ry) => { const t = tex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; };
+
+        const asphaltTex = canvasTex(256, 256, (x, w, h) => {
+          x.fillStyle = '#44474d'; x.fillRect(0, 0, w, h);
+          for (let i = 0; i < 2600; i++) {
+            const v = 50 + Math.random() * 40;
+            x.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + Math.random() * 0.4})`;
+            x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+          }
+        });
+        const paveTex = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = '#cfccc4'; x.fillRect(0, 0, w, h);
+          x.strokeStyle = '#b3b0a8'; x.lineWidth = 2;
+          for (let i = 0; i <= w; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+        });
+        const facadeCache = {};
+        const facadeTex = (wall) => facadeCache[wall] || (facadeCache[wall] = canvasTex(128, 128, (x, w, h) => {
+          x.fillStyle = wall; x.fillRect(0, 0, w, h);
+          x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(0, 118, w, 10);
+          x.fillStyle = '#eef0f2'; x.fillRect(24, 20, 80, 82);
+          const gr = x.createLinearGradient(0, 24, 0, 98);
+          gr.addColorStop(0, '#9cc3dd'); gr.addColorStop(1, '#4b6b84');
+          x.fillStyle = gr; x.fillRect(28, 24, 72, 74);
+          x.fillStyle = '#eef0f2'; x.fillRect(62, 24, 4, 74);
+          x.fillStyle = 'rgba(255,255,255,0.28)'; x.fillRect(28, 24, 72, 9);
+        }));
+
+        const std = (opts) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.92, metalness: 0 }, opts));
+        const plane = (w, d, mat, x, y, z) => {
+          const geo = new T.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
+          const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m;
+        };
+        const box = (w, h, d, mat, x, y, z, cast) => {
+          const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z); m.receiveShadow = true; m.castShadow = !!cast; g.add(m); return m;
+        };
+
+        plane(700, 700, std({ color: '#6f9e52' }), 0, -0.05, 0);
+        plane(2 * H, 2 * R, std({ map: withRepeat(asphaltTex, 2 * H / 6, 2 * R / 6) }), 0, 0.01, 0);
+        const ewLen = R - H, ewMat = std({ map: withRepeat(asphaltTex, ewLen / 6, 2 * H / 6) });
+        plane(ewLen, 2 * H, ewMat, (R + H) / 2, 0.01, 0);
+        plane(ewLen, 2 * H, ewMat, -(R + H) / 2, 0.01, 0);
+
+        const c = (R + H) / 2, paveMat = std({ map: withRepeat(paveTex, ewLen / 2, ewLen / 2) });
+        const curbMat = std({ color: '#e4e2dc' }), lawnMat = std({ color: '#79aa5a' });
+        const inner = H + SW, lawnLen = R - inner, lc = (R + inner) / 2;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          box(ewLen, 0.15, ewLen, paveMat, sx * c, 0.075, sz * c);
+          box(0.3, 0.18, ewLen, curbMat, sx * (H + 0.15), 0.09, sz * c);
+          box(ewLen - 0.3, 0.18, 0.3, curbMat, sx * (c + 0.15), 0.09, sz * (H + 0.15));
+          box(lawnLen, 0.2, lawnLen, lawnMat, sx * lc, 0.1, sz * lc);
+        });
+
+        const rects = [];
+        const approach = (k) => {
+          const out = []; const p = (x, z, w, d) => out.push({ x, z, w, d });
+          for (let x = -H + 0.75; x <= H - 0.74; x += 1.0) p(x, H + 2.5, 0.5, 3.0);
+          const x1 = -H + 0.3, x2 = -0.3; p((x1 + x2) / 2, STOP - 0.2 + 0.0, x2 - x1, 0.45);
+          const z0 = H + 4.5, zMid = H + 40;
+          p(-0.14, (z0 + zMid) / 2, 0.12, zMid - z0); p(0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+          for (let z = zMid + 4; z < R - 4; z += 8) p(0, z + 1.5, 0.15, 3);
+          [-L, L].forEach(lx => {
+            p(lx, (z0 + H + 20) / 2, 0.12, H + 20 - z0);
+            for (let z = H + 24; z < R - 4; z += 9) p(lx, z + 1.5, 0.12, 3);
+          });
+          [-(H - 0.3), H - 0.3].forEach(ex => p(ex, (z0 + R) / 2, 0.15, R - z0));
+          const th = k * Math.PI / 2, cs = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th));
+          out.forEach(r => rects.push({ x: r.x * cs + r.z * sn, z: -r.x * sn + r.z * cs, w: k % 2 ? r.d : r.w, d: k % 2 ? r.w : r.d }));
+        };
+        [0, 1, 2, 3].forEach(approach);
+        const mGeo = new T.PlaneGeometry(1, 1); mGeo.rotateX(-Math.PI / 2);
+        const mMat = std({ color: '#f3f3ee', roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const marks = new T.InstancedMesh(mGeo, mMat, rects.length);
+        const mx = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), scl = new T.Vector3();
+        rects.forEach((r, i) => { pos.set(r.x, 0.025, r.z); scl.set(r.w, 1, r.d); mx.compose(pos, q, scl); marks.setMatrixAt(i, mx); });
+        marks.receiveShadow = true; g.add(marks);
+
+        const trees = [];
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          for (let d = 22; d < 120; d += 11) {
+            if (!(sz > 0 && d < 50)) trees.push([sx * (H + 3.3), sz * d]);
+            trees.push([sx * d, sz * (H + 3.3)]);
+          }
+        });
+        const trunk = new T.InstancedMesh(new T.CylinderGeometry(0.14, 0.2, 2.4, 6), std({ color: '#6b4a32' }), trees.length);
+        const crown = new T.InstancedMesh(new T.IcosahedronGeometry(1.6, 0), std({ color: '#ffffff', flatShading: true }), trees.length);
+        const greens = ['#4f8f3a', '#5d9c43', '#447f35', '#6aa64b'].map(h => new T.Color(h));
+        trees.forEach(([tx, tz], i) => {
+          const s = 0.85 + ((i * 37) % 10) / 25;
+          pos.set(tx, 1.35, tz); scl.set(1, 1, 1); mx.compose(pos, q, scl); trunk.setMatrixAt(i, mx);
+          pos.set(tx, 2.6 + 1.5 * s, tz); scl.set(s, s * 1.1, s); mx.compose(pos, q, scl); crown.setMatrixAt(i, mx);
+          crown.setColorAt(i, greens[i % greens.length]);
+        });
+        trunk.castShadow = crown.castShadow = true; g.add(trunk, crown);
+
+        const walls = ['#f2a65a', '#5fc4b8', '#f6d55c', '#ed6a5a', '#9bc1bc', '#e8d5b7', '#8fb8de', '#c3a6d8'];
+        const roofMat = std({ color: '#7d8590' });
+        let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+        const building = (cx, cz, w, d, h) => {
+          const wall = walls[Math.floor(rnd() * walls.length)];
+          const ft = facadeTex(wall);
+          const mFront = std({ map: withRepeat(ft, Math.max(1, Math.round(w / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          const mSide = std({ map: withRepeat(ft, Math.max(1, Math.round(d / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+          box(w, h, d, [mSide, mSide, roofMat, roofMat, mFront, mFront], cx, h / 2, cz, true);
+          box(w + 0.4, 0.4, d + 0.4, std({ color: '#d9d6cf' }), cx, h + 0.2, cz, false);
+        };
+        const set = 14.5;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+          building(sx * (set + 6), sz * (set + 6), 12, 12, 9 + rnd() * 10);
+          for (let p = set + 14; p < 120;) {
+            const w = 10 + rnd() * 5, d = 10 + rnd() * 4;
+            building(sx * (set + d / 2), sz * (p + w / 2), d, w, 7 + rnd() * 15);
+            const w2 = 10 + rnd() * 5, d2 = 10 + rnd() * 4;
+            building(sx * (p + w2 / 2), sz * (set + d2 / 2), w2, d2, 7 + rnd() * 15);
+            p += Math.max(w, w2) + 2.5;
+          }
+        });
+
+        this.el.setObject3D('city', g);
+      }
+    });
+
+    /* ============================================================
+       LOGIKA LATIHAN (SCENARIOS)
+       ============================================================ */
+    const scenarios = [
+      {
+        id: "pedestrian",
+        camPos: "1.65 0 16",
+        camRot: "0 0 0",
+        hazardName: "Gerombolan Pejalan Kaki",
+        hazardDesc: "Ada beberapa pejalan kaki yang sedang menyeberang di area zebra cross.",
+        risk: "Anda bisa menabrak pejalan kaki jika tetap mempertahankan kecepatan tinggi saat mendekati zebra cross.",
+        action: "Berhenti atau kurangi kecepatan secara perlahan untuk memberikan mereka jalan."
+      },
+      {
+        id: "sideCar",
+        camPos: "1.65 0 6",
+        camRot: "0 0 0",
+        hazardName: "Mobil Keluar dari Samping",
+        hazardDesc: "Mobil merah dari jalan sisi kanan bersiap memotong lajur atau masuk ke jalur utama Anda.",
+        risk: "Risiko tabrakan samping (T-bone) yang fatal jika mobil tersebut melaju tiba-tiba dan Anda tidak siap mengerem.",
+        action: "Turunkan kecepatan, amati pergerakan mobil merah tersebut, dan bersiaplah untuk berhenti jika ia memaksa masuk."
+      },
+      {
+        id: "construction",
+        camPos: "1.65 0 -4",
+        camRot: "0 0 0",
+        hazardName: "Penutupan Lajur Proyek",
+        hazardDesc: "Terdapat barrier jalan dan kerucut yang memblokir sebagian besar lajur kendaraan Anda di depan.",
+        risk: "Kendaraan bisa menabrak pembatas jalan dengan keras atau Anda bisa kehilangan kendali jika mengerem mendadak.",
+        action: "Periksa kaca spion, nyalakan lampu sein, dan berpindah ke lajur yang aman dari jarak yang cukup jauh."
+      }
+    ];
+
+    let currentScenario = 0;
+    let currentPhase = 1;
+
+    function loadScenario(index) {
+      if (index >= scenarios.length) {
+        showFinish();
+        return;
+      }
+      const s = scenarios[index];
+      document.getElementById('scenarioCounter').innerText = `Situasi ${index + 1} / ${scenarios.length}`;
+
+      // Update camera/rig
+      const rig = document.getElementById('playerRig');
+      rig.setAttribute('position', s.camPos);
+      rig.setAttribute('rotation', s.camRot);
+
+      // Reset Hazards visibility
+      document.querySelectorAll('.hazard-target').forEach(el => el.setAttribute('scale', '0 0 0'));
+      document.querySelectorAll('.highlight').forEach(el => el.setAttribute('visible', 'false'));
+
+      // Show correct hazard
+      document.getElementById(s.id).setAttribute('scale', '1 1 1');
+
+      // Reset UI Phase
+      currentPhase = 1;
+      document.getElementById('phase1').style.display = 'block';
+      document.getElementById('phase2').style.display = 'none';
+      document.getElementById('finishPanel').style.display = 'none';
+    }
+
+    // Tidak perlu function selectOption lagi karena langsung menampilkan info risiko
+
+    function nextScenario() {
+      currentScenario++;
+      loadScenario(currentScenario);
+    }
+
+    function showFinish() {
+      document.getElementById('phase1').style.display = 'none';
+      document.getElementById('phase2').style.display = 'none';
+      document.getElementById('finishPanel').style.display = 'block';
+    }
+
+    // Component interaksi klik bahaya
+    AFRAME.registerComponent('hazard-clickable', {
+      init: function () {
+        this.el.addEventListener('mouseenter', () => {
+          if (currentPhase === 1) document.body.style.cursor = 'pointer';
+        });
+        this.el.addEventListener('mouseleave', () => {
+          document.body.style.cursor = 'default';
+        });
+        this.el.addEventListener('click', () => {
+          if (currentPhase !== 1) return;
+
+          const s = scenarios[currentScenario];
+          const hazardEntity = this.el.closest('.hazard-target');
+          if (hazardEntity && hazardEntity.id === s.id) {
+            document.body.style.cursor = 'default';
+            // Show highlight
+            hazardEntity.querySelector('.highlight').setAttribute('visible', 'true');
+
+            // Advance to Phase 2
+            currentPhase = 2;
+            document.getElementById('phase1').style.display = 'none';
+            document.getElementById('phase2').style.display = 'block';
+            document.getElementById('hazardTitle').innerText = s.hazardName;
+            document.getElementById('hazardDesc').innerText = s.hazardDesc;
+            document.getElementById('hazardRisk').innerText = s.risk;
+            document.getElementById('hazardAction').innerText = s.action;
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (currentScenario < scenarios.length - 1) {
+              nextBtn.innerText = 'Situasi Berikutnya';
+            } else {
+              nextBtn.innerText = 'Selesai & Lanjut Kuis';
+            }
+          }
+        });
+      }
+    });
+
+    window.addEventListener('load', () => {
+      document.getElementById('loader').classList.add('done');
+      loadScenario(0);
+    });
+  </script>
 </head>
 
 <body>
-  <a-scene background="color: #87CEEB">
+  <!-- ===================== DUNIA 3D ===================== -->
+  <a-scene id="scene" renderer="colorManagement: true; antialias: true" shadow="type: pcfsoft"
+    vr-mode-ui="enabled: false" fog="type: linear; color: #cfe6f5; near: 30; far: 180" background="color: #a9d3ef">
+
     <a-assets>
-      <a-mixin id="hazard-hitbox" material="color: #ffffff; transparent: true; opacity: 0.01">
-      </a-mixin>
+      <a-asset-item id="personModel" src="assets/models/brisk-walk-sam-3d-person-animated.glb"></a-asset-item>
+      <a-asset-item id="personModel2" src="assets/models/3d_1dbdc0d9b93b4f52b54751d0_1789921724360.glb"></a-asset-item>
+      <a-asset-item id="carModel" src="assets/models/sedan_glb_format_with_interior.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Langit dan lingkungan -->
-    <a-sky color="#87CEEB"></a-sky>
-    <a-plane position="0 0 -8" rotation="-90 0 0" width="40" height="40" color="#5C9E45"></a-plane>
+    <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
 
-    <!-- Jalan -->
-    <a-plane position="0 0.02 -8" rotation="-90 0 0" width="8" height="35" color="#42464B"></a-plane>
-    <a-entity position="0 0.04 -8">
-      <a-box position="0 0 -2" width="0.12" height="0.02" depth="2" color="#F8F5D7"></a-box>
-      <a-box position="0 0 -6" width="0.12" height="0.02" depth="2" color="#F8F5D7"></a-box>
-      <a-box position="0 0 -10" width="0.12" height="0.02" depth="2" color="#F8F5D7"></a-box>
-      <a-box position="0 0 -14" width="0.12" height="0.02" depth="2" color="#F8F5D7"></a-box>
+    <!-- Pencahayaan -->
+    <a-entity light="type: hemisphere; color: #eaf4ff; groundColor: #7d8a68; intensity: 1.6"></a-entity>
+    <a-entity id="lightTarget" position="0 0 5"></a-entity>
+    <a-entity position="35 50 30"
+      light="type: directional; color: #fff4e0; intensity: 2.4; target: #lightTarget; castShadow: true; shadowMapWidth: 2048; shadowMapHeight: 2048; shadowCameraLeft: -50; shadowCameraRight: 50; shadowCameraTop: 50; shadowCameraBottom: -50; shadowCameraNear: 1; shadowCameraFar: 180; shadowBias: -0.0005">
     </a-entity>
 
-    <!-- Petunjuk -->
-    <a-text value="HAZARD RECOGNITION" position="0 3.7 -6" align="center" color="#17202A" width="8"
-      scale="1.3 1.3 1.3"></a-text>
-    <a-text value="Klik 3 objek berbahaya untuk mempelajari cara menghadapinya" position="0 3.25 -6" align="center"
-      color="#17202A" width="8"></a-text>
+    <!-- Lingkungan -->
+    <a-entity id="city" intersection-builder></a-entity>
 
-    <!-- Objek 1: kerucut lalu lintas -->
-    <a-entity id="coneObject" position="-2.4 0 -6">
-      <a-cone position="0 0.65 0" radius-bottom="0.42" radius-top="0.06" height="1.3" color="#F47C20"></a-cone>
-      <a-cylinder position="0 0.08 0" radius="0.48" height="0.16" color="#FFFFFF"></a-cylinder>
-      <a-box position="0 0.65 0.02" width="0.42" height="0.12" depth="0.43" color="#FFFFFF"></a-box>
-      <a-box mixin="hazard-hitbox" class="clickable" position="0 0.8 0.15" width="1.5" height="1.8" depth="0.5"></a-box>
-      <a-text value="KERUCUT" position="0 1.9 0" align="center" color="#17202A" width="3"></a-text>
+    <!-- PLAYER CAR RIG DENGAN POV INTERIOR MOBIL GLB & DASHBOARD PRIMITIF -->
+    <a-entity id="playerRig" position="1.65 0 16">
+      <!-- Model Mobil Player (Tampak luar) -->
+      <a-entity gltf-model="#carModel" position="0 0 0" shadow="cast: true"></a-entity>
+
+      <!-- Kamera (Mata Pengemudi) diletakkan di dalam kabin -->
+      <a-entity id="playerCam" camera look-controls="pointerLockEnabled: false" position="0.35 1.1 0.1">
+        <a-entity cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .clickable; far: 60"></a-entity>
+
+        <!-- Interior Dashboard Primitif yang dikembalikan agar selalu terlihat jelas -->
+        <a-entity position="-0.35 -0.6 -0.8">
+          <!-- Dashboard Atas -->
+          <a-box width="3.5" height="0.4" depth="0.8" color="#1c1c1c" position="0 0 0"
+            material="roughness: 0.9"></a-box>
+          <!-- Panel Speedometer -->
+          <a-box width="0.8" height="0.3" depth="0.1" color="#0a0a0a" position="-0.5 0.25 -0.2"
+            rotation="-15 0 0"></a-box>
+          <a-plane width="0.6" height="0.2" color="#33d6ff" position="-0.5 0.26 -0.14" rotation="-15 0 0"
+            material="shader: flat; opacity: 0.3"></a-plane>
+
+          <!-- Setir -->
+          <a-entity position="-0.5 0.3 0.1" rotation="-15 0 0">
+            <a-torus radius="0.28" radius-tubular="0.025" color="#111" segments-tubular="32"></a-torus>
+            <a-box width="0.5" height="0.06" depth="0.02" color="#222" position="0 0 0"></a-box>
+            <a-box width="0.06" height="0.25" depth="0.02" color="#222" position="0 -0.15 0"></a-box>
+            <a-cylinder radius="0.08" height="0.04" color="#111" rotation="90 0 0"></a-cylinder>
+          </a-entity>
+        </a-entity>
+      </a-entity>
     </a-entity>
 
-    <!-- Objek 2: penghalang jalan -->
-    <a-entity id="barrierObject" position="2.2 0 -6.5">
-      <a-box position="0 0.75 0" width="2.3" height="0.8" depth="0.45" color="#F3F3F3"></a-box>
-      <a-box position="0 0.75 0.24" width="0.42" height="0.82" depth="0.04" rotation="0 0 18" color="#E53935"></a-box>
-      <a-box position="-0.75 0.75 0.24" width="0.42" height="0.82" depth="0.04" rotation="0 0 18"
-        color="#E53935"></a-box>
-      <a-box position="0.75 0.75 0.24" width="0.42" height="0.82" depth="0.04" rotation="0 0 18"
-        color="#E53935"></a-box>
-      <a-box position="-0.75 0.15 0" width="0.18" height="0.3" depth="0.35" color="#42464B"></a-box>
-      <a-box position="0.75 0.15 0" width="0.18" height="0.3" depth="0.35" color="#42464B"></a-box>
-      <a-box mixin="hazard-hitbox" class="clickable" position="0 0.85 0.35" width="3.2" height="1.7" depth="0.5"></a-box>
-      <a-text value="PENGHALANG" position="0 1.55 0" align="center" color="#17202A" width="4"></a-text>
+    <!-- ===================== OBJEK BAHAYA ===================== -->
+
+    <!-- 1. Pejalan Kaki (Animasi GLB) di area zebra cross -->
+    <a-entity id="pedestrian" class="hazard-target" position="-2 0 9.1" scale="0 0 0">
+      <!-- Orang 1 (Model Lama - Berjalan di tempat agar tidak berat) -->
+      <a-entity position="0 0 0">
+        <a-entity gltf-model="#personModel" rotation="0 90 0" scale="1 1 1" animation-mixer
+          shadow="cast: true"></a-entity>
+        <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
+          material="opacity:0; transparent:true"></a-box>
+      </a-entity>
+
+      <!-- Orang 2 (Model Baru) -->
+      <a-entity position="-1.5 0 0.6">
+        <a-entity gltf-model="#personModel2" rotation="0 90 0" scale="1 1 1" animation-mixer
+          shadow="cast: true"></a-entity>
+        <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
+          material="opacity:0; transparent:true"></a-box>
+      </a-entity>
+
+      <!-- Orang 3 (Model Lama - Statis tanpa animasi untuk hemat resource) -->
+      <a-entity position="-3 0 -0.5">
+        <a-entity gltf-model="#personModel" rotation="0 90 0" scale="0.95 0.95 0.95" shadow="cast: true"></a-entity>
+        <a-box class="clickable" hazard-clickable width="1.2" height="2.2" depth="1.2" position="0 1.1 0"
+          material="opacity:0; transparent:true"></a-box>
+      </a-entity>
+
+      <a-ring class="highlight" radius-inner="2.5" radius-outer="2.8" color="#FFD700" rotation="-90 0 0"
+        position="0 0.02 0" visible="false" material="shader: flat"></a-ring>
     </a-entity>
 
-    <!-- Objek 3: pejalan kaki -->
-    <a-entity id="pedestrianObject" position="-0.8 0 -10">
-      <a-sphere position="0 1.65 0" radius="0.28" color="#E9B98D"></a-sphere>
-      <a-cylinder position="0 1.05 0" radius="0.22" height="0.85" color="#2878B5"></a-cylinder>
-      <a-cylinder position="-0.15 0.42 0" radius="0.09" height="0.75" color="#263238"></a-cylinder>
-      <a-cylinder position="0.15 0.42 0" radius="0.09" height="0.75" color="#263238"></a-cylinder>
-      <a-cylinder position="-0.34 1.05 0" radius="0.07" height="0.65" rotation="0 0 25" color="#E9B98D"></a-cylinder>
-      <a-cylinder position="0.34 1.05 0" radius="0.07" height="0.65" rotation="0 0 -25" color="#E9B98D"></a-cylinder>
-      <a-box mixin="hazard-hitbox" class="clickable" position="0 1.1 0.3" width="1.35" height="2.6" depth="0.6"></a-box>
-      <a-text value="PEJALAN KAKI" position="0 2.25 0" align="center" color="#17202A" width="4"></a-text>
+    <!-- 2. Mobil dari arah samping persimpangan -->
+    <a-entity id="sideCar" class="hazard-target" position="11 0 -1.65" rotation="0 180 0" scale="0 0 0">
+      <a-entity gltf-model="#carModel" shadow="cast: true"></a-entity>
+
+      <a-box class="clickable" hazard-clickable width="4.5" height="1.8" depth="2" position="0 0.9 0"
+        material="opacity:0; transparent:true"></a-box>
+      <a-ring class="highlight" radius-inner="2.5" radius-outer="2.8" color="#FFD700" rotation="-90 0 0"
+        position="0 0.02 0" visible="false" material="shader: flat"></a-ring>
     </a-entity>
 
-    <!-- Panel informasi: tombol berada di depan panel agar mudah diklik -->
-    <a-entity id="infoPanel" visible="false" scale="0 0 0" position="0 2 -3.1">
-      <a-plane position="0 0 0" width="6.4" height="3.4" color="#FFFFFF"
-        material="shader: flat; opacity: 0.98"></a-plane>
-      <a-text id="infoTitle" value="INFORMASI BAHAYA" position="0 1.15 0.08" align="center" color="#16324F" width="5.8"
-        wrap-count="32"></a-text>
-      <a-text id="infoBody" value="" position="-2.65 0.55 0.08" align="left" anchor="left" baseline="top"
-        color="#17202A" width="5.3" wrap-count="55"></a-text>
-      <a-box id="closePanel" class="clickable" position="0 -1.15 0.28" width="2.5" height="0.65" depth="0.18"
-        color="#C62828"></a-box>
-      <a-text value="TUTUP" position="0 -1.15 0.4" align="center" color="#FFFFFF" width="3"
-        scale="1.1 1.1 1.1"></a-text>
+    <!-- 3. Perbaikan Jalan (Barrier & Kerucut) -->
+    <a-entity id="construction" class="hazard-target" position="1.65 0.1 -15" scale="0 0 0">
+      <a-box position="0 0.5 0" width="2.8" height="0.8" depth="0.2" color="#F1C40F" shadow="cast: true"></a-box>
+      <a-box position="-1.3 0.5 0.11" width="0.3" height="0.8" depth="0.02" rotation="0 0 45" color="#222"
+        shadow="cast: true"></a-box>
+      <a-box position="0 0.5 0.11" width="0.3" height="0.8" depth="0.02" rotation="0 0 45" color="#222"
+        shadow="cast: true"></a-box>
+      <a-box position="1.3 0.5 0.11" width="0.3" height="0.8" depth="0.02" rotation="0 0 45" color="#222"
+        shadow="cast: true"></a-box>
+      <a-cone position="-2 0.5 1" radius-bottom="0.25" radius-top="0.05" height="1" color="#E67E22"
+        shadow="cast: true"></a-cone>
+      <a-cone position="2 0.5 1" radius-bottom="0.25" radius-top="0.05" height="1" color="#E67E22"
+        shadow="cast: true"></a-cone>
+
+      <a-box class="clickable" hazard-clickable width="5" height="1.5" depth="3" position="0 0.7 0.5"
+        material="opacity:0; transparent:true"></a-box>
+      <a-ring class="highlight" radius-inner="2.2" radius-outer="2.5" color="#FFD700" rotation="-90 0 0"
+        position="0 0.02 0" visible="false" material="shader: flat"></a-ring>
     </a-entity>
-
-    <!-- Panel selesai -->
-    <a-entity id="donePanel" visible="false" scale="0 0 0" position="0 2 -3">
-      <a-plane width="5.8" height="2.8" color="#FFFFFF" position="0 0 0"></a-plane>
-      <a-text value="HEBAT! SEMUA BAHAYA SUDAH DIPELAJARI" position="0 0.65 0.08" align="center" color="#16324F"
-        width="5.2" wrap-count="32"></a-text>
-      <a-box id="continueButton" class="clickable" position="0 -0.65 0.28" width="3.2" height="0.7" depth="0.18"
-        color="#168447"></a-box>
-      <a-text value="LANJUT QUIZ" position="0 -0.65 0.4" align="center" color="#FFFFFF" width="4"></a-text>
-    </a-entity>
-
-    <!-- Navigasi bawah -->
-    <a-box id="backButton" class="clickable" position="-2.8 0.55 -2.7" width="1.5" height="0.55" depth="0.18"
-      color="#34495E"></a-box>
-    <a-text value="KEMBALI" position="-2.8 0.55 -2.57" align="center" color="#FFFFFF" width="2.2"></a-text>
-    <a-box id="homeButton" class="clickable" position="2.8 0.55 -2.7" width="1.5" height="0.55" depth="0.18"
-      color="#34495E"></a-box>
-    <a-text value="HOME" position="2.8 0.55 -2.57" align="center" color="#FFFFFF" width="2"></a-text>
-
-    <!-- Mouse cursor/raycaster: satu saja untuk seluruh tombol dan objek -->
-    <a-entity id="mouseCursor" cursor="rayOrigin: mouse; fuse: false"
-      raycaster="objects: .clickable; far: 40; interval: 0">
-    </a-entity>
-
-    <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
   </a-scene>
 
-  <script>
-    (() => {
-      const found = new Set();
-      const infoPanel = document.querySelector('#infoPanel');
-      const donePanel = document.querySelector('#donePanel');
-      const infoTitle = document.querySelector('#infoTitle');
-      const infoBody = document.querySelector('#infoBody');
+  <!-- ===================== UI 2D (Overlay) ===================== -->
+  <div id="hud">
+    <div id="crosshair"></div>
+    <header class="topbar">
+      <div class="nav-left">
+        <a href="index.html" class="btn">&lt; HOME</a>
+        <a href="situasi.html" class="btn">&lt; KEMBALI</a>
+      </div>
+      <div class="status">
+        <h1>LATIHAN DETEKSI BAHAYA</h1>
+      </div>
+      <div class="status">
+        <span id="scenarioCounter">Skenario 1 / 3</span>
+      </div>
+    </header>
 
-      const hazardInfo = {
-        coneObject: {
-          title: 'KERUCUT LALU LINTAS',
-          body: 'Bahaya: kerucut menandakan area kerja atau jalur yang dibatasi.\\n\\nCara aman:\\n• Kurangi kecepatan.\\n• Ikuti arah jalur yang tersedia.\\n• Jangan menerobos area yang ditutup.'
-        },
-        barrierObject: {
-          title: 'PENGHALANG JALAN',
-          body: 'Bahaya: penghalang menunjukkan jalur yang tidak boleh dilalui.\\n\\nCara aman:\\n• Jangan melewati penghalang.\\n• Perhatikan rambu dan petunjuk petugas.\\n• Berpindahlah jalur hanya jika aman.'
-        },
-        pedestrianObject: {
-          title: 'PEJALAN KAKI',
-          body: 'Bahaya: pejalan kaki dapat menyeberang atau berada dekat jalan.\\n\\nCara aman:\\n• Kurangi kecepatan dan waspada.\\n• Beri jalan kepada pejalan kaki.\\n• Jaga jarak aman dan jangan menggunakan ponsel saat berkendara.'
-        }
-      };
+    <div class="side-panel">
+      <!-- TAHAP 1 -->
+      <div id="phase1" class="panel-card">
+        <h2 class="eyebrow">TAHAP 1: DETEKSI</h2>
+        <h3>Amati Lingkungan</h3>
+        <p>Anda saat ini berada di kursi pengemudi. Gunakan mouse (klik dan geser) untuk melihat ke luar kaca depan
+          mobil. Klik langsung pada objek atau kondisi yang berpotensi membahayakan perjalanan Anda.</p>
+      </div>
 
-      function showHazard(id) {
-        const data = hazardInfo[id];
-        if (!data) return;
-        infoTitle.setAttribute('value', data.title);
-        infoBody.setAttribute('value', data.body.replace(/\\n/g, '\n'));
-        infoPanel.setAttribute('visible', true);
-        infoPanel.setAttribute('scale', '1 1 1');
-        donePanel.setAttribute('visible', false);
-        donePanel.setAttribute('scale', '0 0 0');
-        found.add(id);
+      <!-- TAHAP 2 -->
+      <div id="phase2" class="panel-card" style="display: none;">
+        <h2 class="eyebrow" style="color: var(--ok)">IDENTIFIKASI BERHASIL</h2>
+        <h3 id="hazardTitle">Nama Bahaya</h3>
+        <p id="hazardDesc">Deskripsi situasi bahaya.</p>
+        <div class="divider"></div>
+
+        <div class="feedback-box error" style="margin-top: 0; margin-bottom: 12px; display: block;">
+          <h4>Risiko:</h4>
+          <p id="hazardRisk">Risiko...</p>
+        </div>
+
+        <div class="feedback-box success" style="margin-top: 0; margin-bottom: 24px; display: block;">
+          <h4>Tindakan Aman:</h4>
+          <p id="hazardAction">Tindakan...</p>
+        </div>
+
+        <button id="nextBtn" class="btn primary" onclick="nextScenario()">Situasi Berikutnya</button>
+      </div>
+
+      <!-- SELESAI -->
+      <div id="finishPanel" class="panel-card" style="display: none;">
+        <h2 class="eyebrow" style="color: var(--ok)">LATIHAN SELESAI</h2>
+        <h3>Hebat Sekali!</h3>
+        <p>Anda telah berhasil mengidentifikasi semua bahaya potensial dan mempelajari tindakan pencegahannya.</p>
+        <a href="quiz.html" class="btn primary" style="display: inline-block;">Lanjut ke Kuis</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="loader">
+    <div style="text-align:center">
+      <div
+        style="width:42px;height:42px;border:4px solid rgba(255,255,255,.15);border-top-color:#33d6ff;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 14px;">
+      </div>
+      <div>Memuat Skenario...</div>
+    </div>
+  </div>
+  <style>
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
-
-      function closeInfo() {
-        infoPanel.setAttribute('visible', false);
-        infoPanel.setAttribute('scale', '0 0 0');
-        if (found.size === 3) {
-          window.setTimeout(() => {
-            donePanel.setAttribute('visible', true);
-            donePanel.setAttribute('scale', '1 1 1');
-          }, 150);
-        }
-      }
-
-      Object.keys(hazardInfo).forEach(id => {
-        const hitbox = document.querySelector('#' + id + ' .clickable');
-        if (hitbox) hitbox.addEventListener('click', () => showHazard(id));
-      });
-
-      document.querySelector('#closePanel').addEventListener('click', () => {
-        if (!infoPanel.getAttribute('visible')) return;
-        closeInfo();
-      });
-      document.querySelector('#continueButton').addEventListener('click', () => {
-        if (!donePanel.getAttribute('visible')) return;
-        window.location.href = 'quiz.html';
-      });
-      document.querySelector('#backButton').addEventListener('click', () => {
-        window.location.href = 'situasi.html';
-      });
-      document.querySelector('#homeButton').addEventListener('click', () => {
-        window.location.href = 'index.html';
-      });
-    })();
-  </script>
+    }
+  </style>
 </body>
 
 </html>
