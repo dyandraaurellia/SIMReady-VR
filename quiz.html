@@ -6,88 +6,610 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SIMReadyVR - Kuis Keselamatan Jalan</title>
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', system-ui, sans-serif;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* OVERLAY UI LAYER */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* Klik tembus ke A-Frame jika bukan pada panel */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            pointer-events: auto;
+            background: rgba(12, 18, 30, 0.85);
+            border: 1px solid rgba(51, 214, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .back-btn:hover {
+            background: #1a2b42;
+            border-color: #33d6ff;
+        }
+
+        .panel {
+            pointer-events: auto;
+            /* Tangkap klik di area panel */
+            background: rgba(12, 18, 30, 0.92);
+            border: 1px solid rgba(51, 214, 255, 0.25);
+            border-radius: 16px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+            width: 90%;
+            max-width: 550px;
+            padding: 35px 40px;
+            color: white;
+            text-align: center;
+            box-sizing: border-box;
+            backdrop-filter: blur(8px);
+        }
+
+        .label-small {
+            color: #33d6ff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            color: #b7c2d3;
+            font-size: 14px;
+            margin: 0 0 25px 0;
+            font-weight: 400;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #b7c2d3;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .progress-bar-container {
+            background: #1a2b42;
+            border-radius: 6px;
+            height: 6px;
+            width: 100%;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: #33d6ff;
+            height: 100%;
+            width: 20%;
+            transition: width 0.4s ease;
+            border-radius: 6px;
+        }
+
+        .question {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            display: flex;
+            align-items: center;
+            background: rgba(22, 48, 77, 0.6);
+            border: 1px solid rgba(51, 214, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            text-align: left;
+            font-family: inherit;
+            font-size: 15px;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+            line-height: 1.4;
+        }
+
+        .option-btn:hover:not(.disabled) {
+            background: rgba(51, 214, 255, 0.1);
+            border-color: #33d6ff;
+        }
+
+        /* State Colors */
+        .option-btn.correct {
+            background: rgba(46, 229, 157, 0.15);
+            border-color: #2ee59d;
+        }
+
+        .option-btn.wrong {
+            background: rgba(255, 77, 106, 0.15);
+            border-color: #ff4d6a;
+        }
+
+        .option-btn.disabled {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .option-letter {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 50%;
+            background: #1a2b42;
+            color: #33d6ff;
+            font-weight: 700;
+            margin-right: 15px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .option-btn.correct .option-letter {
+            background: #2ee59d;
+            color: #0c121e;
+        }
+
+        .option-btn.wrong .option-letter {
+            background: #ff4d6a;
+            color: #ffffff;
+        }
+
+        .feedback {
+            margin-top: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 20px;
+            transition: color 0.3s;
+        }
+
+        .feedback.correct {
+            color: #2ee59d;
+        }
+
+        .feedback.wrong {
+            color: #ff4d6a;
+        }
+
+        .feedback.neutral {
+            color: #b7c2d3;
+        }
+
+        /* Result Panel Specifics */
+        .score-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            border: 6px solid #33d6ff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto;
+            background: rgba(51, 214, 255, 0.05);
+        }
+
+        .score-val {
+            font-size: 36px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+
+        .score-pct {
+            font-size: 15px;
+            color: #33d6ff;
+            font-weight: 600;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+
+        .btn-primary {
+            background: #33d6ff;
+            color: #0c121e;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #66e0ff;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #1a2b42;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #233957;
+            transform: translateY(-2px);
+        }
+    </style>
+    <script>
+        window.ROAD = { H: 6.6, L: 3.3, SW: 4.5, R: 160, STOP: 11.6 };
+
+        AFRAME.registerComponent('intersection-builder', {
+            init: function () {
+                const T = THREE;
+                const { H, L, SW, R, STOP } = window.ROAD;
+                const g = new T.Group();
+
+                const canvasTex = (w, h, draw) => {
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    draw(c.getContext('2d'), w, h);
+                    const t = new T.CanvasTexture(c);
+                    t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 8;
+                    return t;
+                };
+                const withRepeat = (tex, rx, ry) => { const t = tex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; };
+
+                const asphaltTex = canvasTex(256, 256, (x, w, h) => {
+                    x.fillStyle = '#44474d'; x.fillRect(0, 0, w, h);
+                    for (let i = 0; i < 2600; i++) {
+                        const v = 50 + Math.random() * 40;
+                        x.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + Math.random() * 0.4})`;
+                        x.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+                    }
+                });
+                const paveTex = canvasTex(128, 128, (x, w, h) => {
+                    x.fillStyle = '#cfccc4'; x.fillRect(0, 0, w, h);
+                    x.strokeStyle = '#b3b0a8'; x.lineWidth = 2;
+                    for (let i = 0; i <= w; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+                });
+                const facadeCache = {};
+                const facadeTex = (wall) => facadeCache[wall] || (facadeCache[wall] = canvasTex(128, 128, (x, w, h) => {
+                    x.fillStyle = wall; x.fillRect(0, 0, w, h);
+                    x.fillStyle = 'rgba(0,0,0,0.10)'; x.fillRect(0, 118, w, 10);
+                    x.fillStyle = '#eef0f2'; x.fillRect(24, 20, 80, 82);
+                    const gr = x.createLinearGradient(0, 24, 0, 98);
+                    gr.addColorStop(0, '#9cc3dd'); gr.addColorStop(1, '#4b6b84');
+                    x.fillStyle = gr; x.fillRect(28, 24, 72, 74);
+                    x.fillStyle = '#eef0f2'; x.fillRect(62, 24, 4, 74);
+                    x.fillStyle = 'rgba(255,255,255,0.28)'; x.fillRect(28, 24, 72, 9);
+                }));
+
+                const std = (opts) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.92, metalness: 0 }, opts));
+                const plane = (w, d, mat, x, y, z) => {
+                    const geo = new T.PlaneGeometry(w, d); geo.rotateX(-Math.PI / 2);
+                    const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m;
+                };
+                const box = (w, h, d, mat, x, y, z, cast) => {
+                    const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+                    m.position.set(x, y, z); m.receiveShadow = true; m.castShadow = !!cast; g.add(m); return m;
+                };
+
+                plane(700, 700, std({ color: '#6f9e52' }), 0, -0.05, 0);
+                plane(2 * H, 2 * R, std({ map: withRepeat(asphaltTex, 2 * H / 6, 2 * R / 6) }), 0, 0.01, 0);
+                const ewLen = R - H, ewMat = std({ map: withRepeat(asphaltTex, ewLen / 6, 2 * H / 6) });
+                plane(ewLen, 2 * H, ewMat, (R + H) / 2, 0.01, 0);
+                plane(ewLen, 2 * H, ewMat, -(R + H) / 2, 0.01, 0);
+
+                const c = (R + H) / 2, paveMat = std({ map: withRepeat(paveTex, ewLen / 2, ewLen / 2) });
+                const curbMat = std({ color: '#e4e2dc' }), lawnMat = std({ color: '#79aa5a' });
+                const inner = H + SW, lawnLen = R - inner, lc = (R + inner) / 2;
+                [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+                    box(ewLen, 0.15, ewLen, paveMat, sx * c, 0.075, sz * c);
+                    box(0.3, 0.18, ewLen, curbMat, sx * (H + 0.15), 0.09, sz * c);
+                    box(ewLen - 0.3, 0.18, 0.3, curbMat, sx * (c + 0.15), 0.09, sz * (H + 0.15));
+                    box(lawnLen, 0.2, lawnLen, lawnMat, sx * lc, 0.1, sz * lc);
+                });
+
+                const rects = [];
+                const approach = (k) => {
+                    const out = []; const p = (x, z, w, d) => out.push({ x, z, w, d });
+                    for (let x = -H + 0.75; x <= H - 0.74; x += 1.0) p(x, H + 2.5, 0.5, 3.0);
+                    const x1 = -H + 0.3, x2 = -0.3; p((x1 + x2) / 2, STOP - 0.2 + 0.0, x2 - x1, 0.45);
+                    const z0 = H + 4.5, zMid = H + 40;
+                    p(-0.14, (z0 + zMid) / 2, 0.12, zMid - z0); p(0.14, (z0 + zMid) / 2, 0.12, zMid - z0);
+                    for (let z = zMid + 4; z < R - 4; z += 8) p(0, z + 1.5, 0.15, 3);
+                    [-L, L].forEach(lx => {
+                        p(lx, (z0 + H + 20) / 2, 0.12, H + 20 - z0);
+                        for (let z = H + 24; z < R - 4; z += 9) p(lx, z + 1.5, 0.12, 3);
+                    });
+                    [-(H - 0.3), H - 0.3].forEach(ex => p(ex, (z0 + R) / 2, 0.15, R - z0));
+                    const th = k * Math.PI / 2, cs = Math.round(Math.cos(th)), sn = Math.round(Math.sin(th));
+                    out.forEach(r => rects.push({ x: r.x * cs + r.z * sn, z: -r.x * sn + r.z * cs, w: k % 2 ? r.d : r.w, d: k % 2 ? r.w : r.d }));
+                };
+                [0, 1, 2, 3].forEach(approach);
+                const mGeo = new T.PlaneGeometry(1, 1); mGeo.rotateX(-Math.PI / 2);
+                const mMat = std({ color: '#f3f3ee', roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+                const marks = new T.InstancedMesh(mGeo, mMat, rects.length);
+                const mx = new T.Matrix4(), q = new T.Quaternion(), pos = new T.Vector3(), scl = new T.Vector3();
+                rects.forEach((r, i) => { pos.set(r.x, 0.025, r.z); scl.set(r.w, 1, r.d); mx.compose(pos, q, scl); marks.setMatrixAt(i, mx); });
+                marks.receiveShadow = true; g.add(marks);
+
+                const trees = [];
+                [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+                    for (let d = 22; d < 120; d += 11) {
+                        if (!(sz > 0 && d < 50)) trees.push([sx * (H + 3.3), sz * d]);
+                        trees.push([sx * d, sz * (H + 3.3)]);
+                    }
+                });
+                const trunk = new T.InstancedMesh(new T.CylinderGeometry(0.14, 0.2, 2.4, 6), std({ color: '#6b4a32' }), trees.length);
+                const crown = new T.InstancedMesh(new T.IcosahedronGeometry(1.6, 0), std({ color: '#ffffff', flatShading: true }), trees.length);
+                const greens = ['#4f8f3a', '#5d9c43', '#447f35', '#6aa64b'].map(h => new T.Color(h));
+                trees.forEach(([tx, tz], i) => {
+                    const s = 0.85 + ((i * 37) % 10) / 25;
+                    pos.set(tx, 1.35, tz); scl.set(1, 1, 1); mx.compose(pos, q, scl); trunk.setMatrixAt(i, mx);
+                    pos.set(tx, 2.6 + 1.5 * s, tz); scl.set(s, s * 1.1, s); mx.compose(pos, q, scl); crown.setMatrixAt(i, mx);
+                    crown.setColorAt(i, greens[i % greens.length]);
+                });
+                trunk.castShadow = crown.castShadow = true; g.add(trunk, crown);
+
+                const walls = ['#f2a65a', '#5fc4b8', '#f6d55c', '#ed6a5a', '#9bc1bc', '#e8d5b7', '#8fb8de', '#c3a6d8'];
+                const roofMat = std({ color: '#7d8590' });
+                let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+                const building = (cx, cz, w, d, h) => {
+                    const wall = walls[Math.floor(rnd() * walls.length)];
+                    const ft = facadeTex(wall);
+                    const mFront = std({ map: withRepeat(ft, Math.max(1, Math.round(w / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+                    const mSide = std({ map: withRepeat(ft, Math.max(1, Math.round(d / 3.4)), Math.max(1, Math.round(h / 3.3))) });
+                    box(w, h, d, [mSide, mSide, roofMat, roofMat, mFront, mFront], cx, h / 2, cz, true);
+                    box(w + 0.4, 0.4, d + 0.4, std({ color: '#d9d6cf' }), cx, h + 0.2, cz, false);
+                };
+                const set = 14.5;
+                [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sz]) => {
+                    building(sx * (set + 6), sz * (set + 6), 12, 12, 9 + rnd() * 10);
+                    for (let p = set + 14; p < 120;) {
+                        const w = 10 + rnd() * 5, d = 10 + rnd() * 4;
+                        building(sx * (set + d / 2), sz * (p + w / 2), d, w, 7 + rnd() * 15);
+                        const w2 = 10 + rnd() * 5, d2 = 10 + rnd() * 4;
+                        building(sx * (p + w2 / 2), sz * (set + d2 / 2), w2, d2, 7 + rnd() * 15);
+                        p += Math.max(w, w2) + 2.5;
+                    }
+                });
+
+                this.el.setObject3D('city', g);
+            }
+        });
+    </script>
 </head>
 
-<body style="margin:0">
-    <a-scene background="color: #DCEAF4">
-        <a-sky color="#DCEAF4"></a-sky>
-        <a-plane position="0 0 -7" rotation="-90 0 0" width="40" height="40" color="#A9C89A"></a-plane>
-        <a-plane position="0 0.02 -7" rotation="-90 0 0" width="8" height="30" color="#42464B"></a-plane>
-        <a-text value="SIMReadyVR" position="0 4 -6" align="center" color="#16324F" width="8"
-            scale="1.3 1.3 1.3"></a-text>
-        <a-text value="KUIS KESELAMATAN JALAN" position="0 3.55 -6" align="center" color="#16324F" width="7"></a-text>
-        <a-entity id="quizPanel" position="0 2 -4">
-            <a-plane width="7.2" height="4.5" color="#FFFFFF"></a-plane>
-            <a-text id="progress" value="" position="0 1.7 0.08" align="center" color="#607D8B" width="6"></a-text>
-            <a-text id="question" value="" position="-3 1.1 0.08" align="left" anchor="left" baseline="top"
-                color="#17202A" width="6"></a-text>
-            <a-box id="answerA" class="clickable" position="0 0.25 0.22" width="6.1" height="0.55" depth="0.15"
-                color="#2878B5"></a-box>
-            <a-text id="answerAText" value="" position="-2.8 0.25 0.34" align="left" color="#FFFFFF"
-                width="5.5"></a-text>
-            <a-box id="answerB" class="clickable" position="0 -0.5 0.22" width="6.1" height="0.55" depth="0.15"
-                color="#2878B5"></a-box>
-            <a-text id="answerBText" value="" position="-2.8 -0.5 0.34" align="left" color="#FFFFFF"
-                width="5.5"></a-text>
-            <a-box id="answerC" class="clickable" position="0 -1.25 0.22" width="6.1" height="0.55" depth="0.15"
-                color="#2878B5"></a-box>
-            <a-text id="answerCText" value="" position="-2.8 -1.25 0.34" align="left" color="#FFFFFF"
-                width="5.5"></a-text>
-            <a-text id="feedback" value="Pilih satu jawaban." position="0 -1.85 0.1" align="center" color="#17202A"
-                width="6.2"></a-text>
-        </a-entity>
-        <a-entity id="resultPanel" visible="false" position="0 2 -4">
-            <a-plane width="6.5" height="3.4" color="#FFFFFF"></a-plane>
-            <a-text value="KUIS SELESAI!" position="0 0.9 0.08" align="center" color="#16324F" width="5"></a-text>
-            <a-text id="scoreText" value="" position="0 0.25 0.08" align="center" color="#17202A" width="5"></a-text>
-            <a-text value="Terima kasih sudah belajar keselamatan jalan." position="0 -0.25 0.08" align="center"
-                color="#17202A" width="5.5"></a-text>
-            <a-box id="retryButton" class="clickable" position="-1.3 -1 0.22" width="2.2" height="0.6" depth="0.15"
-                color="#2878B5"></a-box>
-            <a-text value="ULANGI" position="-1.3 -1 0.34" align="center" color="#FFFFFF" width="3"></a-text>
-            <a-box id="homeButton" class="clickable" position="1.3 -1 0.22" width="2.2" height="0.6" depth="0.15"
-                color="#34495E"></a-box>
-            <a-text value="HOME" position="1.3 -1 0.34" align="center" color="#FFFFFF" width="3"></a-text>
-        </a-entity>
-        <a-box id="backButton" class="clickable" position="-2.8 0.55 -2.7" width="1.5" height="0.55" depth="0.18"
-            color="#34495E"></a-box>
-        <a-text value="KEMBALI" position="-2.8 0.55 -2.57" align="center" color="#FFFFFF" width="2.2"></a-text>
-        <a-entity cursor="rayOrigin: mouse; fuse: false"
-            raycaster="objects: .clickable; far: 40; interval: 0"></a-entity>
-        <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+<body>
+    <!-- 3D Environment Background -->
+    <a-scene background="color: #a9d3ef" renderer="colorManagement: true; antialias: true"
+        fog="type: linear; color: #cfe6f5; near: 30; far: 180" vr-mode-ui="enabled: false">
+        <a-sky material="shader: flat; side: back; fog: false; color: #93c9ee"></a-sky>
+
+        <a-entity light="type: hemisphere; color: #eaf4ff; groundColor: #7d8a68; intensity: 1.6"></a-entity>
+        <a-entity position="35 50 30"
+            light="type: directional; color: #fff4e0; intensity: 1.5; castShadow: false"></a-entity>
+
+        <a-entity id="city" intersection-builder></a-entity>
+
+        <!-- Kamera statis menatap lurus ke jalan -->
+        <a-entity camera look-controls="enabled: false" wasd-controls="enabled: false" position="0 1.6 15"></a-entity>
     </a-scene>
+
+    <!-- HTML OVERLAY UI -->
+    <div id="ui-layer">
+        <a href="hazard.html" class="back-btn">&lt; KEMBALI</a>
+
+        <!-- QUIZ PANEL -->
+        <div id="quizPanel" class="panel">
+            <div class="label-small">SIMREADYVR &bull; KUIS</div>
+            <h1 class="title">Kuis Keselamatan Jalan</h1>
+            <p class="subtitle">Uji pemahamanmu sebelum berkendara</p>
+
+            <div class="progress-header">
+                <span id="progressText">PERTANYAAN 1 DARI 5</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="progressBarFill" class="progress-fill"></div>
+            </div>
+
+            <div id="question" class="question">Loading...</div>
+
+            <div class="options">
+                <button class="option-btn" onclick="choose(0)" id="btn0">
+                    <div class="option-letter">A</div>
+                    <div id="answer0" class="option-text"></div>
+                </button>
+                <button class="option-btn" onclick="choose(1)" id="btn1">
+                    <div class="option-letter">B</div>
+                    <div id="answer1" class="option-text"></div>
+                </button>
+                <button class="option-btn" onclick="choose(2)" id="btn2">
+                    <div class="option-letter">C</div>
+                    <div id="answer2" class="option-text"></div>
+                </button>
+            </div>
+
+            <div id="feedback" class="feedback neutral">Silakan pilih salah satu jawaban.</div>
+        </div>
+
+        <!-- RESULT PANEL -->
+        <div id="resultPanel" class="panel" style="display: none;">
+            <div class="label-small">SIMREADYVR &bull; HASIL</div>
+            <h1 class="title">KUIS SELESAI!</h1>
+
+            <div class="score-circle">
+                <div id="scoreVal" class="score-val">0 / 5</div>
+                <div id="scorePct" class="score-pct">0%</div>
+            </div>
+
+            <p id="motivationText" class="subtitle" style="font-size: 16px; color: white; margin-bottom: 0;"></p>
+
+            <div class="result-actions">
+                <button class="btn-primary" onclick="retryQuiz()">ULANGI KUIS</button>
+                <button class="btn-secondary" onclick="location.href='index.html'">KEMBALI KE MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUIZ LOGIC -->
     <script>
-        (() => {
-            const qs = [
-                ["Saat melihat kerucut lalu lintas, apa yang sebaiknya dilakukan?", ["A. Mempercepat kendaraan", "B. Mengurangi kecepatan dan mengikuti jalur aman", "C. Mengabaikannya"], 1, "Kurangi kecepatan dan ikuti jalur yang tersedia."],
-                ["Apa arti penghalang yang menutup sebagian jalan?", ["A. Jalur bebas dilalui", "B. Hanya hiasan", "C. Jangan melewati area yang ditutup"], 2, "Jangan menerobos penghalang; ikuti rambu dan petunjuk."],
-                ["Apa tindakan aman saat ada pejalan kaki di dekat jalan?", ["A. Waspada, kurangi kecepatan, dan beri jalan", "B. Membunyikan klakson terus", "C. Menambah kecepatan"], 0, "Waspadai pejalan kaki dan beri ruang untuk menyeberang."],
-                ["Apa yang perlu dilakukan sebelum berpindah jalur?", ["A. Langsung membelok", "B. Pastikan kondisi sekitar aman", "C. Tidak perlu melihat sekitar"], 1, "Periksa kondisi sekitar dan berpindah hanya jika aman."],
-                ["Kebiasaan mana yang paling aman saat berkendara?", ["A. Menggunakan ponsel", "B. Mengikuti kendaraan sangat dekat", "C. Fokus dan menjaga jarak aman"], 2, "Fokus di jalan dan jaga jarak aman."]
-            ];
-            let i = 0, score = 0, answered = false;
-            const panel = document.querySelector('#quizPanel'), result = document.querySelector('#resultPanel');
-            const boxes = ['A', 'B', 'C'].map(x => document.querySelector('#answer' + x));
-            const texts = ['A', 'B', 'C'].map(x => document.querySelector('#answer' + x + 'Text'));
-            function render() {
-                answered = false; const q = qs[i];
-                document.querySelector('#progress').setAttribute('value', 'Pertanyaan ' + (i + 1) + ' dari ' + qs.length);
-                document.querySelector('#question').setAttribute('value', q[0]);
-                q[1].forEach((v, j) => { texts[j].setAttribute('value', v); boxes[j].setAttribute('color', '#2878B5'); });
-                document.querySelector('#feedback').setAttribute('value', 'Pilih satu jawaban.');
+        const qs = [
+            ["Saat melihat kerucut lalu lintas, apa yang sebaiknya dilakukan?", ["Mempercepat kendaraan", "Mengurangi kecepatan dan mengikuti jalur aman", "Mengabaikannya"], 1, "Kurangi kecepatan dan ikuti jalur yang tersedia."],
+            ["Apa arti penghalang yang menutup sebagian jalan?", ["Jalur bebas dilalui", "Hanya hiasan", "Jangan melewati area yang ditutup"], 2, "Jangan menerobos penghalang; ikuti rambu dan petunjuk."],
+            ["Apa tindakan aman saat ada pejalan kaki di dekat jalan?", ["Waspada, kurangi kecepatan, dan beri jalan", "Membunyikan klakson terus", "Menambah kecepatan"], 0, "Waspadai pejalan kaki dan beri ruang untuk menyeberang."],
+            ["Apa yang perlu dilakukan sebelum berpindah jalur?", ["Langsung membelok", "Pastikan kondisi sekitar aman", "Tidak perlu melihat sekitar"], 1, "Periksa kondisi sekitar dan berpindah hanya jika aman."],
+            ["Kebiasaan mana yang paling aman saat berkendara?", ["Menggunakan ponsel", "Mengikuti kendaraan sangat dekat", "Fokus dan menjaga jarak aman"], 2, "Fokus di jalan dan jaga jarak aman."]
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let answered = false;
+        let timeoutId = null;
+
+        const quizPanel = document.getElementById('quizPanel');
+        const resultPanel = document.getElementById('resultPanel');
+        const progressText = document.getElementById('progressText');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const questionEl = document.getElementById('question');
+        const feedbackEl = document.getElementById('feedback');
+
+        function render() {
+            answered = false;
+            const q = qs[currentIdx];
+
+            progressText.innerText = `PERTANYAAN ${currentIdx + 1} DARI ${qs.length}`;
+            progressBarFill.style.width = `${((currentIdx) / qs.length) * 100}%`;
+
+            questionEl.innerText = q[0];
+
+            for (let j = 0; j < 3; j++) {
+                const btn = document.getElementById('btn' + j);
+                const txt = document.getElementById('answer' + j);
+
+                // Hapus awalan "A. ", "B. " yang ada di array asli jika ada, karena kita pakai lingkaran huruf
+                let rawText = q[1][j];
+                if (rawText.match(/^[A-C]\.\s/)) rawText = rawText.substring(3);
+
+                txt.innerText = rawText;
+
+                btn.className = 'option-btn'; // reset class
             }
-            function choose(j) {
-                if (answered) return; answered = true; const q = qs[i], ok = j === q[2]; if (ok) score++;
-                boxes[j].setAttribute('color', ok ? '#168447' : '#C62828');
-                document.querySelector('#feedback').setAttribute('value', (ok ? 'Benar! ' : 'Belum tepat. ') + q[3]);
-                setTimeout(() => { i++; if (i < qs.length) render(); else { panel.setAttribute('visible', false); result.setAttribute('visible', true); document.querySelector('#scoreText').setAttribute('value', 'Nilai kamu: ' + score + ' dari ' + qs.length); } }, 1300);
+
+            feedbackEl.innerText = 'Silakan pilih salah satu jawaban.';
+            feedbackEl.className = 'feedback neutral';
+        }
+
+        window.choose = function (selectedIdx) {
+            if (answered) return;
+            answered = true;
+
+            const q = qs[currentIdx];
+            const correctIdx = q[2];
+            const isCorrect = selectedIdx === correctIdx;
+
+            if (isCorrect) score++;
+
+            // Beri kelas disabled pada semua tombol agar tidak hover/klik lagi
+            for (let j = 0; j < 3; j++) {
+                const btn = document.getElementById('btn' + j);
+                btn.classList.add('disabled');
+
+                if (j === correctIdx) {
+                    btn.classList.add('correct');
+                } else if (j === selectedIdx && !isCorrect) {
+                    btn.classList.add('wrong');
+                }
             }
-            boxes.forEach((b, j) => b.addEventListener('click', () => choose(j)));
-            document.querySelector('#retryButton').addEventListener('click', () => { i = 0; score = 0; result.setAttribute('visible', false); panel.setAttribute('visible', true); render(); });
-            document.querySelector('#homeButton').addEventListener('click', () => location.href = 'index.html');
-            document.querySelector('#backButton').addEventListener('click', () => location.href = 'hazard.html');
+
+            feedbackEl.innerText = (isCorrect ? 'BENAR! ' : 'SALAH! ') + q[3];
+            feedbackEl.className = 'feedback ' + (isCorrect ? 'correct' : 'wrong');
+
+            timeoutId = setTimeout(() => {
+                currentIdx++;
+                if (currentIdx < qs.length) {
+                    render();
+                } else {
+                    showResult();
+                }
+            }, 2500);
+        }
+
+        function showResult() {
+            progressBarFill.style.width = '100%';
+            quizPanel.style.display = 'none';
+            resultPanel.style.display = 'block';
+
+            document.getElementById('scoreVal').innerText = `${score} / ${qs.length}`;
+            document.getElementById('scorePct').innerText = `${Math.round(score / qs.length * 100)}%`;
+
+            let mot = 'Hebat! Kamu sudah sangat siap berkendara.';
+            if (score <= 3) mot = 'Lumayan, tapi mari pelajari lagi aturan keselamatan!';
+            if (score < 2) mot = 'Jangan menyerah! Terus berlatih mengenali bahaya.';
+            document.getElementById('motivationText').innerText = mot;
+        }
+
+        window.retryQuiz = function () {
+            clearTimeout(timeoutId);
+            currentIdx = 0;
+            score = 0;
+            resultPanel.style.display = 'none';
+            quizPanel.style.display = 'block';
             render();
-        })();
+        }
+
+        // Inisialisasi awal
+        render();
     </script>
 </body>
 
